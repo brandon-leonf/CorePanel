@@ -32,13 +32,16 @@ render_header('Manage Users • CorePanel');
             <td><?= e($u['role']) ?></td>
             <td><?= e((string)$u['created_at']) ?></td>
             <td class="admin-user-actions-cell">
-              <div class="admin-user-actions-split" role="group" aria-label="User actions">
-                <form method="post" action="/admin/users/role.php" class="admin-user-action-form">
+              <div class="admin-user-actions-inline" role="group" aria-label="User actions">
+                <a class="admin-action-link admin-action-edit" href="/admin/users/edit.php?id=<?= (int)$u['id'] ?>">Edit</a>
+                <span class="admin-action-sep">|</span>
+
+                <form method="post" action="/admin/users/role.php" class="admin-inline-form">
                   <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
                   <input type="hidden" name="id" value="<?= (int)$u['id'] ?>">
                   <input type="hidden" name="role" value="<?= e($u['role']) ?>">
                   <button
-                    class="admin-user-action-btn admin-user-action-role<?= $u['role'] === 'admin' ? '' : ' admin-user-action-role-promote' ?>"
+                    class="admin-action-link admin-action-role<?= $u['role'] === 'admin' ? '' : ' admin-action-role-promote' ?>"
                     type="submit"
                   >
                     <i class="bi <?= $u['role'] === 'admin' ? 'bi-person' : 'bi-shield-lock' ?>" aria-hidden="true"></i>
@@ -46,16 +49,18 @@ render_header('Manage Users • CorePanel');
                   </button>
                 </form>
 
-                <form method="post" action="/admin/users/delete.php" class="admin-user-action-form">
+                <span class="admin-action-sep">|</span>
+
+                <form method="post" action="/admin/users/delete.php" class="admin-inline-form">
                   <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
                   <input type="hidden" name="id" value="<?= (int)$u['id'] ?>">
                   <button
-                    class="admin-user-action-btn admin-user-action-delete"
+                    class="admin-action-link admin-action-delete"
                     type="submit"
                     onclick="return confirm('Delete this user? This will also delete their items.')"
+                    aria-label="Delete user"
                   >
                     <i class="bi bi-trash3" aria-hidden="true"></i>
-                    <span>Delete</span>
                   </button>
                 </form>
               </div>

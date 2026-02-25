@@ -230,78 +230,82 @@ nav a:hover {
 .admin-users-page .admin-users-table th:nth-child(5),
 .admin-users-page .admin-users-table td:nth-child(5) {
   white-space: nowrap;
-  text-align: center;
+  text-align: left;
 }
 
 .admin-users-page .admin-user-actions-cell {
-  text-align: center;
+  text-align: left;
   vertical-align: middle;
+  white-space: nowrap;
 }
 
-.admin-users-page .admin-user-actions-split {
-  display: inline-flex;
-  align-items: stretch;
-  margin: 0 auto;
-  border-radius: 14px;
-  overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  background: rgba(255, 255, 255, 0.04);
-}
-
-.admin-users-page .admin-user-action-form {
-  margin: 0 !important;
-  display: block !important;
-}
-
-.admin-users-page .admin-user-action-btn {
-  width: auto;
-  min-width: 72px;
-  height: 32px;
-  margin-top: 0;
-  padding: 0 10px;
-  border: 0;
-  border-radius: 0;
+.admin-users-page .admin-user-actions-inline {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  gap: 5px;
+  margin: 0;
+  white-space: nowrap;
+  gap: 6px;
+}
+
+.admin-users-page .admin-inline-form {
+  margin: 0;
+  display: inline;
+}
+
+.admin-users-page .admin-action-link {
+  width: auto;
+  min-width: 0;
+  height: auto;
+  margin-top: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 4px;
   line-height: 1;
-  font-size: 12px;
+  font-size: inherit;
   font-weight: 600;
   text-decoration: none;
-  color: #eaf4ff;
+  color: #9fd0ff;
   cursor: pointer;
 }
 
-.admin-users-page .admin-user-action-btn .bi {
-  font-size: 13px;
+.admin-users-page .admin-action-link:hover {
+  filter: none;
+  text-decoration: underline;
 }
 
-.admin-users-page .admin-user-action-role {
-  min-width: 108px;
-  border-right: 1px solid rgba(255, 255, 255, 0.16);
-  background: rgba(16, 24, 36, 0.82);
+.admin-users-page .admin-action-link .bi {
+  font-size: 0.95em;
 }
 
-.admin-users-page .admin-user-action-role:hover {
-  background: rgba(30, 42, 60, 0.9);
+.admin-users-page .admin-action-sep {
+  color: #6d7d96;
+  font-size: inherit;
 }
 
-.admin-users-page .admin-user-action-role-promote {
-  background: linear-gradient(180deg, #8b5cf6, #6d28d9);
+.admin-users-page .admin-action-edit {
+  color: #9fd0ff;
 }
 
-.admin-users-page .admin-user-action-role-promote:hover {
-  filter: brightness(1.07);
+.admin-users-page .admin-action-role {
+  color: #d7e1f0;
 }
 
-.admin-users-page .admin-user-action-delete {
-  min-width: 58px;
-  background: linear-gradient(180deg, #ff5d6f, #df4253);
+.admin-users-page .admin-action-role-promote {
+  color: #b480ff;
 }
 
-.admin-users-page .admin-user-action-delete:hover {
-  filter: brightness(1.06);
+.admin-users-page .admin-action-role-promote .bi {
+  color: #b480ff;
+}
+
+.admin-users-page .admin-action-delete,
+.admin-users-page .admin-action-delete .bi {
+  color: #ff5d6f;
 }
 
 .items-page th,
@@ -714,18 +718,29 @@ button:active {
   }
 
   .admin-users-page .admin-user-action-btn {
-    height: 30px;
-    min-width: 68px;
-    padding: 0 9px;
-    font-size: 12px;
+    height: 29px;
+    min-width: 60px;
+    padding: 0 8px;
+    font-size: 11px;
   }
 
   .admin-users-page .admin-user-action-role {
-    min-width: 100px;
+    width: 124px;
+    min-width: 124px;
   }
 
   .admin-users-page .admin-user-action-delete {
-    min-width: 52px;
+    width: 96px;
+    min-width: 96px;
+  }
+
+  .admin-users-page .admin-user-actions-cell > a {
+    height: 29px;
+    width: 70px;
+    min-width: 70px;
+    padding: 0 8px;
+    margin-right: 5px;
+    font-size: 11px;
   }
 }
 
@@ -846,22 +861,34 @@ button:active {
 
   .admin-users-page .admin-user-action-btn {
     height: 28px;
-    min-width: 60px;
+    min-width: 56px;
     padding: 0 8px;
     gap: 4px;
-    font-size: 11px;
+    font-size: 10px;
   }
 
   .admin-users-page .admin-user-action-btn .bi {
-    font-size: 11px;
+    font-size: 10px;
   }
 
   .admin-users-page .admin-user-action-role {
-    min-width: 88px;
+    width: 110px;
+    min-width: 110px;
   }
 
   .admin-users-page .admin-user-action-delete {
-    min-width: 46px;
+    width: 86px;
+    min-width: 86px;
+  }
+
+  .admin-users-page .admin-user-actions-cell > a {
+    height: 28px;
+    width: 64px;
+    min-width: 64px;
+    padding: 0 8px;
+    margin-right: 4px;
+    font-size: 10px;
+    border-radius: 12px;
   }
 }
 
@@ -966,11 +993,19 @@ button:active {
   }
 
   .admin-users-page .admin-user-action-role {
-    min-width: 82px;
+    width: 100px;
+    min-width: 100px;
   }
 
   .admin-users-page .admin-user-action-delete {
-    min-width: 44px;
+    width: 78px;
+    min-width: 78px;
+  }
+
+  .admin-users-page .admin-user-actions-cell > a {
+    width: 58px;
+    min-width: 58px;
+    margin-right: 4px;
   }
 }
 
