@@ -59,6 +59,7 @@ render_header('Items • CorePanel');
           <tr>
             <th>Title</th>
             <th>Description</th>
+            <th>Image</th>
             <th>Created</th>
             <th>Actions</th>
           </tr>
@@ -68,6 +69,13 @@ render_header('Items • CorePanel');
             <tr>
               <td><?= e($it['title']) ?></td>
               <td><?= e(mb_strimwidth((string)($it['description'] ?? ''), 0, 80, '...')) ?></td>
+              <td>
+                <?php if (!empty($it['image_path'])): ?>
+                    <img src="<?= e($it['image_path']) ?>" alt="" style="width:60px; height:60px; object-fit:cover; border-radius:8px;">
+                <?php else: ?>
+                    —
+                <?php endif; ?>
+              </td>
               <td><?= e((string)$it['created_at']) ?></td>
               <td class="item-actions-cell">
                 <div class="item-actions-split" role="group" aria-label="Item actions">

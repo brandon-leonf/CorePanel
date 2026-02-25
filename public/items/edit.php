@@ -5,6 +5,7 @@ $pdo = require __DIR__ . '/../../config/db.php';
 require __DIR__ . '/../../src/helpers.php';
 require __DIR__ . '/../../src/auth.php';
 require __DIR__ . '/../../src/layout.php';
+require __DIR__ . '/../../src/upload.php';
 
 require_login();
 $user = current_user($pdo);
@@ -13,7 +14,7 @@ $userId = (int)$user['id'];
 $id = (int)($_GET['id'] ?? 0);
 if ($id <= 0) { http_response_code(400); exit('Bad request'); }
 
-$stmt = $pdo->prepare("SELECT id, title, description FROM items WHERE id = ? AND user_id = ?");
+$stmt = $pdo->prepare("SELECT id, title, description, image_path FROM items WHERE id = ? AND user_id = ?");
 $stmt->execute([$id, $userId]);
 $item = $stmt->fetch();
 
@@ -24,17 +25,42 @@ $title = (string)$item['title'];
 $description = (string)($item['description'] ?? '');
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-  $title = trim((string)($_POST['title'] ?? ''));
-  $description = trim((string)($_POST['description'] ?? ''));
-
-  if ($title === '') $errors[] = 'Title is required.';
-
-  if (!$errors) {
-    $up = $pdo->prepare("UPDATE items SET title = ?, description = ? WHERE id = ? AND user_id = ?");
-    $up->execute([$title, $description === '' ? null : $description, $id, $userId]);
-    redirect('/items/index.php');
+    $title = trim((string)($_POST['title'] ?? ''));
+    $description = trim((string)($_POST['description'] ?? ''));
+  
+    if ($title === '') $errors[] = 'Title is required.';
+  
+    // Keep current image by default
+    $newImagePath = $item['image_path'] ?? null;
+  
+    // If a new image was uploaded, replace it
+    if (!empty($_FILES['image']) && $_FILES['image']['error'] !== UPLOAD_ERR_NO_FILE) {
+      [$uploadedPath, $upErr] = upload_item_image($_FILES['image']);
+      if ($upErr) {
+        $errors[] = $upErr;
+      } else {
+        $newImagePath = $uploadedPath;
+      }
+    }
+  
+    if (!$errors) {
+      $up = $pdo->prepare("
+        UPDATE items
+        SET title = ?, description = ?, image_path = ?
+        WHERE id = ? AND user_id = ?
+      ");
+      $up->execute([
+        $title,
+        $description === '' ? null : $description,
+        $newImagePath,
+        $id,
+        $userId
+      ]);
+  
+      redirect('/items/index.php');
+    }
   }
-}
+
 
 render_header('Edit Item • CorePanel');
 ?>
@@ -46,7 +72,7 @@ render_header('Edit Item • CorePanel');
     <ul><?php foreach ($errors as $err): ?><li><?= e($err) ?></li><?php endforeach; ?></ul>
   <?php endif; ?>
 
-  <form method="post">
+  <form method="post" enctype="multipart/form-data">
     <label>Title<br>
       <input name="title" value="<?= e($title) ?>" required>
     </label>
@@ -55,6 +81,20 @@ render_header('Edit Item • CorePanel');
       <textarea name="description" rows="5"><?= e($description) ?></textarea>
     </label>
 
+    <?php if (!empty($item['image_path'])): ?>
+    <p>Current image:<br>
+        <img src="<?= e($item['image_path']) ?>" alt="" style="max-width:180px; height:auto;">
+    </p>
+    <?php endif; ?>
+
+    <label>Replace image (optional)<br>
+        <?php if (!empty($item['image_path'])): ?>
+            <p>Current image:<br>
+                <img src="<?= e($item['image_path']) ?>" style="max-width:180px; height:auto;">
+            </p>
+        <?php endif; ?>
+        <input type="file" name="image" accept="image/*">
+    </label>
     <button type="submit">Save</button>
   </form>
 </div>
