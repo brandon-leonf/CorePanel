@@ -308,6 +308,311 @@ nav a:hover {
   color: #ff5d6f;
 }
 
+.container.admin-user-edit-page {
+  --card-max-width: 1080px;
+}
+
+.admin-user-edit-page .admin-user-edit-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 360px) minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.admin-user-edit-page .admin-user-profile-panel,
+.admin-user-edit-page .admin-user-projects-panel {
+  padding: 14px 14px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(11, 16, 24, 0.56);
+}
+
+.admin-user-edit-page .admin-user-profile-panel h2,
+.admin-user-edit-page .admin-user-projects-panel h2 {
+  margin: 0 0 10px;
+  text-align: left;
+  font-size: 24px;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+}
+
+.admin-user-edit-page .admin-user-project-create-form {
+  margin: 0 0 12px;
+}
+
+.admin-user-edit-page select {
+  width: 100%;
+  height: 43px;
+  margin-top: 7px;
+  padding: 0 12px;
+  border-radius: 8px;
+  border: 1px solid var(--field-border);
+  background: linear-gradient(180deg, #0f1520, #0a1018);
+  color: #f0f5ff;
+  outline: none;
+  transition: border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.admin-user-edit-page select:focus {
+  border-color: #2a9bff;
+  box-shadow: 0 0 0 3px rgba(42, 155, 255, 0.18);
+}
+
+.admin-user-edit-page .admin-user-projects-note {
+  margin: 6px 0 0;
+  color: var(--muted);
+  text-align: left;
+}
+
+.admin-user-edit-page .admin-user-projects-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 4px;
+}
+
+.admin-user-edit-page .admin-user-projects-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 680px;
+}
+
+.admin-user-edit-page .admin-user-projects-table th,
+.admin-user-edit-page .admin-user-projects-table td {
+  text-align: left;
+  vertical-align: top;
+}
+
+.admin-user-edit-page .admin-user-projects-table th:nth-child(1),
+.admin-user-edit-page .admin-user-projects-table td:nth-child(1),
+.admin-user-edit-page .admin-user-projects-table th:nth-child(4),
+.admin-user-edit-page .admin-user-projects-table td:nth-child(4) {
+  white-space: nowrap;
+}
+
+.container.admin-project-edit-page {
+  --card-max-width: 1180px;
+}
+
+.admin-project-edit-page .admin-project-edit-header {
+  margin-bottom: 14px;
+}
+
+.admin-project-edit-page .admin-project-edit-header > p {
+  margin-bottom: 12px;
+}
+
+.admin-project-edit-page .admin-project-edit-header h1 {
+  margin-bottom: 8px;
+}
+
+.admin-project-edit-page .admin-project-edit-client {
+  color: var(--muted);
+}
+
+.admin-project-edit-page .admin-project-edit-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+
+.admin-project-edit-page .admin-project-edit-panel,
+.admin-project-edit-page .admin-project-edit-tasks-section {
+  padding: 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(11, 16, 24, 0.58);
+}
+
+.admin-project-edit-page .admin-project-edit-panel h2,
+.admin-project-edit-page .admin-project-edit-tasks-section h2 {
+  margin: 0 0 10px;
+  text-align: left;
+  font-size: 25px;
+  line-height: 1.1;
+}
+
+.admin-project-edit-page .admin-project-edit-task-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.admin-project-edit-page select {
+  width: 100%;
+  height: 43px;
+  margin-top: 7px;
+  padding: 0 12px;
+  border-radius: 8px;
+  border: 1px solid var(--field-border);
+  background: linear-gradient(180deg, #0f1520, #0a1018);
+  color: #f0f5ff;
+  outline: none;
+  transition: border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.admin-project-edit-page select:focus {
+  border-color: #2a9bff;
+  box-shadow: 0 0 0 3px rgba(42, 155, 255, 0.18);
+}
+
+.admin-project-edit-page .admin-project-edit-tasks-section {
+  margin-top: 16px;
+}
+
+.admin-project-edit-page .admin-project-edit-tasks-wrap {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 4px;
+}
+
+.admin-project-edit-page .admin-project-edit-tasks-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 760px;
+}
+
+.admin-project-edit-page .admin-project-edit-tasks-table th,
+.admin-project-edit-page .admin-project-edit-tasks-table td {
+  text-align: left;
+  vertical-align: top;
+}
+
+.admin-project-edit-page .admin-project-edit-tasks-table th:nth-child(2),
+.admin-project-edit-page .admin-project-edit-tasks-table td:nth-child(2),
+.admin-project-edit-page .admin-project-edit-tasks-table th:nth-child(3),
+.admin-project-edit-page .admin-project-edit-tasks-table td:nth-child(3),
+.admin-project-edit-page .admin-project-edit-tasks-table th:nth-child(4),
+.admin-project-edit-page .admin-project-edit-tasks-table td:nth-child(4),
+.admin-project-edit-page .admin-project-edit-tasks-table th:nth-child(5),
+.admin-project-edit-page .admin-project-edit-tasks-table td:nth-child(5) {
+  white-space: nowrap;
+}
+
+.admin-project-edit-page .admin-project-edit-tasks-table th:nth-child(6),
+.admin-project-edit-page .admin-project-edit-tasks-table td:nth-child(6) {
+  white-space: nowrap;
+}
+
+.admin-project-edit-page .admin-project-edit-task-actions-cell {
+  text-align: left;
+}
+
+.admin-project-edit-page .admin-project-edit-task-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.admin-project-edit-page .admin-project-edit-task-action-link {
+  color: #9fd0ff;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.admin-project-edit-page .admin-project-edit-task-action-link:hover {
+  text-decoration: underline;
+}
+
+.admin-project-edit-page .admin-project-edit-task-delete-form {
+  margin: 0;
+  display: inline;
+}
+
+.admin-project-edit-page .admin-project-edit-task-delete-btn {
+  width: auto;
+  min-width: 0;
+  height: auto;
+  margin-top: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+  font-size: inherit;
+  font-weight: 600;
+  text-decoration: none;
+  color: #ff5d6f;
+  cursor: pointer;
+}
+
+.admin-project-edit-page .admin-project-edit-task-delete-btn:hover {
+  text-decoration: underline;
+}
+
+.admin-project-edit-page .admin-project-edit-total {
+  margin: 12px 0 0;
+  text-align: left;
+}
+
+.container.admin-projects-page {
+  --card-max-width: 1240px;
+}
+
+.admin-projects-page {
+  overflow: hidden;
+}
+
+.admin-projects-page .admin-projects-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 4px;
+}
+
+.admin-projects-page .admin-projects-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.admin-projects-page .admin-projects-table th,
+.admin-projects-page .admin-projects-table td {
+  text-align: left;
+  vertical-align: top;
+}
+
+.admin-projects-page .admin-projects-table th:nth-child(1),
+.admin-projects-page .admin-projects-table td:nth-child(1),
+.admin-projects-page .admin-projects-table th:nth-child(4),
+.admin-projects-page .admin-projects-table td:nth-child(4),
+.admin-projects-page .admin-projects-table th:nth-child(5),
+.admin-projects-page .admin-projects-table td:nth-child(5) {
+  white-space: nowrap;
+}
+
+.admin-projects-page .admin-projects-table th:nth-child(3),
+.admin-projects-page .admin-projects-table td:nth-child(3) {
+  min-width: 320px;
+  word-break: break-word;
+}
+
+.admin-projects-page .admin-project-action-link {
+  color: #9fd0ff;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.admin-projects-page .admin-project-action-link:hover {
+  text-decoration: underline;
+}
+
+.admin-projects-page .admin-project-actions-cell {
+  white-space: nowrap;
+}
+
+.admin-projects-page .admin-project-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .items-page th,
 .items-page td {
   vertical-align: top;
@@ -479,7 +784,7 @@ nav a:hover {
 }
 
 .container.admin-dashboard-page {
-  --card-max-width: 860px;
+  --card-max-width: 1240px;
 }
 
 .admin-dashboard-page .admin-authz-panel {
@@ -506,6 +811,120 @@ nav a:hover {
 
 .admin-dashboard-page .admin-authz-panel p + p {
   margin-top: 8px;
+}
+
+.admin-dashboard-page .admin-dashboard-projects {
+  margin-top: 18px;
+  text-align: left;
+  padding: 14px 16px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(11, 16, 24, 0.72);
+}
+
+.admin-dashboard-page .admin-dashboard-projects h2 {
+  margin: 0 0 8px;
+  text-align: left;
+  font-size: 24px;
+  letter-spacing: -0.01em;
+}
+
+.admin-dashboard-page .admin-dashboard-projects > p {
+  margin: 0 0 10px;
+  text-align: left;
+  color: var(--muted);
+}
+
+.container.client-dashboard-page {
+  --card-max-width: 1240px;
+}
+
+.client-dashboard-page .client-dashboard-projects {
+  margin-top: 18px;
+  text-align: left;
+  padding: 14px 16px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(11, 16, 24, 0.72);
+}
+
+.client-dashboard-page .client-dashboard-projects h2 {
+  margin: 0 0 8px;
+  text-align: left;
+  font-size: 24px;
+  letter-spacing: -0.01em;
+}
+
+.client-dashboard-page .client-dashboard-projects > p {
+  margin: 0;
+  text-align: left;
+  color: var(--muted);
+}
+
+.container.client-project-view-page {
+  --card-max-width: 1180px;
+}
+
+.client-project-view-page .client-project-view-header {
+  margin-bottom: 8px;
+}
+
+.client-project-view-page .client-project-view-status {
+  color: var(--muted);
+}
+
+.client-project-view-page .client-project-view-description {
+  margin: 0 0 14px;
+  color: #b8c7de;
+}
+
+.client-project-view-page .client-project-view-tasks-section {
+  padding: 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(11, 16, 24, 0.72);
+}
+
+.client-project-view-page .client-project-view-tasks-section h2 {
+  margin: 0 0 10px;
+  text-align: left;
+  font-size: 24px;
+  letter-spacing: -0.01em;
+}
+
+.client-project-view-page .client-project-view-tasks-wrap {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 4px;
+}
+
+.client-project-view-page .client-project-view-tasks-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 760px;
+}
+
+.client-project-view-page .client-project-view-tasks-table th,
+.client-project-view-page .client-project-view-tasks-table td {
+  text-align: left;
+  vertical-align: top;
+}
+
+.client-project-view-page .client-project-view-tasks-table th:nth-child(2),
+.client-project-view-page .client-project-view-tasks-table td:nth-child(2),
+.client-project-view-page .client-project-view-tasks-table th:nth-child(3),
+.client-project-view-page .client-project-view-tasks-table td:nth-child(3),
+.client-project-view-page .client-project-view-tasks-table th:nth-child(4),
+.client-project-view-page .client-project-view-tasks-table td:nth-child(4),
+.client-project-view-page .client-project-view-tasks-table th:nth-child(5),
+.client-project-view-page .client-project-view-tasks-table td:nth-child(5) {
+  white-space: nowrap;
+}
+
+.client-project-view-page .client-project-view-total {
+  margin: 12px 0 0;
 }
 
 /* register.php fallback layout (when markup is not wrapped in .container) */
@@ -766,6 +1185,62 @@ button:active {
     padding: 24px 20px 20px;
   }
 
+  .container.admin-project-edit-page {
+    --card-max-width: 1040px;
+  }
+
+  .container.admin-projects-page {
+    --card-max-width: 1040px;
+  }
+
+  .admin-projects-page .admin-projects-table {
+    min-width: 940px;
+  }
+
+  .client-project-view-page .client-project-view-tasks-section h2 {
+    font-size: 22px;
+  }
+
+  .client-project-view-page .client-project-view-tasks-table {
+    min-width: 700px;
+  }
+
+  .client-dashboard-page .client-dashboard-projects h2 {
+    font-size: 22px;
+  }
+
+  .admin-dashboard-page .admin-dashboard-projects h2 {
+    font-size: 22px;
+  }
+
+  .admin-project-edit-page .admin-project-edit-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .admin-project-edit-page .admin-project-edit-panel h2,
+  .admin-project-edit-page .admin-project-edit-tasks-section h2 {
+    font-size: 22px;
+  }
+
+  .admin-project-edit-page .admin-project-edit-tasks-table {
+    min-width: 700px;
+  }
+
+  .admin-user-edit-page .admin-user-edit-layout {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .admin-user-edit-page .admin-user-profile-panel h2,
+  .admin-user-edit-page .admin-user-projects-panel h2 {
+    font-size: 22px;
+  }
+
+  .admin-user-edit-page .admin-user-projects-table {
+    min-width: 620px;
+  }
+
   .admin-users-page .admin-users-table {
     min-width: 860px;
   }
@@ -906,6 +1381,41 @@ button:active {
     padding: 20px 14px 14px;
   }
 
+  .admin-project-edit-page .admin-project-edit-panel,
+  .admin-project-edit-page .admin-project-edit-tasks-section {
+    padding: 12px 10px 10px;
+  }
+
+  .client-project-view-page .client-project-view-tasks-section {
+    padding: 12px 10px 10px;
+  }
+
+  .client-project-view-page .client-project-view-tasks-table {
+    min-width: 620px;
+  }
+
+  .admin-projects-page .admin-projects-table {
+    min-width: 860px;
+  }
+
+  .admin-project-edit-page .admin-project-edit-task-row {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  .admin-project-edit-page .admin-project-edit-tasks-table {
+    min-width: 640px;
+  }
+
+  .admin-user-edit-page .admin-user-profile-panel,
+  .admin-user-edit-page .admin-user-projects-panel {
+    padding: 12px 10px 10px;
+  }
+
+  .admin-user-edit-page .admin-user-projects-table {
+    min-width: 580px;
+  }
+
   .admin-users-page .admin-users-table {
     min-width: 740px;
   }
@@ -974,6 +1484,22 @@ button:active {
 
   .admin-dashboard-page .admin-authz-panel {
     padding: 10px 12px;
+  }
+
+  .client-dashboard-page .client-dashboard-projects {
+    padding: 10px 12px;
+  }
+
+  .client-dashboard-page .client-dashboard-projects h2 {
+    font-size: 20px;
+  }
+
+  .admin-dashboard-page .admin-dashboard-projects {
+    padding: 10px 12px;
+  }
+
+  .admin-dashboard-page .admin-dashboard-projects h2 {
+    font-size: 20px;
   }
 
   .admin-dashboard-page .admin-authz-panel h2 {
