@@ -53,3 +53,5 @@ render_header('Forgot Password • CorePanel');
   <p><a href="/login.php">Back to login</a></p>
 </div>
 <?php render_footer(); ?>
+
+

@@ -89,6 +89,107 @@ nav a:hover {
   box-shadow: 0 18px 65px rgba(0, 0, 0, 0.52), inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
+.container.container-wide {
+  --card-max-width: 1120px;
+  padding: 28px 28px 24px;
+}
+
+.items-page {
+  overflow: hidden;
+}
+
+.items-page .items-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 4px;
+}
+
+.items-page .items-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.items-page th,
+.items-page td {
+  vertical-align: top;
+}
+
+.container.items-page > form[method="get"] button {
+  width: min(100%, 220px);
+  height: 40px;
+  margin-top: 10px;
+  margin-left: auto;
+  margin-right: auto;
+  display: block;
+  font-size: 14px;
+}
+
+.items-page .item-actions-cell {
+  white-space: nowrap;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.items-page .item-actions-split {
+  display: inline-flex;
+  align-items: stretch;
+  margin: 0 auto;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.items-page .item-action-form {
+  margin: 0 !important;
+  display: block !important;
+}
+
+.items-page .item-action-btn {
+  width: auto;
+  min-width: 72px;
+  height: 32px;
+  margin-top: 0;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  line-height: 1;
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+  color: #eaf4ff;
+  cursor: pointer;
+}
+
+.items-page .item-action-btn .bi {
+  font-size: 13px;
+}
+
+.items-page .item-action-edit {
+  min-width: 94px;
+  border-right: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(16, 24, 36, 0.82);
+}
+
+.items-page .item-action-edit:hover {
+  background: rgba(30, 42, 60, 0.9);
+}
+
+.items-page .item-action-delete {
+  min-width: 58px;
+  background: linear-gradient(180deg, #ff5d6f, #df4253);
+}
+
+.items-page .item-action-delete:hover {
+  filter: brightness(1.06);
+}
+
 /* register.php fallback layout (when markup is not wrapped in .container) */
 nav + h1,
 nav + h1 + ul,
@@ -251,6 +352,10 @@ button:active {
   transform: translateY(1px);
 }
 
+.container form[method="get"] button {
+  margin-top: 12px;
+}
+
 @media (max-width: 1024px) {
   :root {
     --card-max-width: 480px;
@@ -268,6 +373,21 @@ button:active {
   .container,
   nav + h1 {
     margin-top: 64px;
+  }
+
+  .items-page .item-action-btn {
+    height: 30px;
+    min-width: 68px;
+    padding: 0 9px;
+    font-size: 12px;
+  }
+
+  .items-page .item-action-edit {
+    min-width: 88px;
+  }
+
+  .items-page .item-action-delete {
+    min-width: 52px;
   }
 }
 
@@ -287,6 +407,10 @@ button:active {
     );
     margin: 52px auto;
     padding: 24px 16px 16px;
+  }
+
+  .container.container-wide {
+    padding: 24px 20px 20px;
   }
 
   nav + h1,
@@ -320,6 +444,34 @@ button:active {
   nav + h1 {
     font-size: 30px;
   }
+
+  .items-page .item-actions-split {
+    border-radius: 12px;
+  }
+
+  .items-page .item-action-btn {
+    height: 28px;
+    min-width: 60px;
+    padding: 0 8px;
+    gap: 4px;
+    font-size: 11px;
+  }
+
+  .items-page .item-action-btn .bi {
+    font-size: 11px;
+  }
+
+  .items-page .item-action-edit {
+    min-width: 78px;
+  }
+
+  .items-page .item-action-delete {
+    min-width: 46px;
+  }
+
+  .items-page .items-table {
+    min-width: 760px;
+  }
 }
 
 @media (max-width: 560px) {
@@ -329,6 +481,10 @@ button:active {
       var(--card-max-width)
     );
     margin: 40px auto;
+    padding: 20px 14px 14px;
+  }
+
+  .container.container-wide {
     padding: 20px 14px 14px;
   }
 
@@ -369,6 +525,14 @@ button:active {
 
   nav {
     justify-content: center;
+  }
+
+  .items-page .item-action-edit {
+    min-width: 72px;
+  }
+
+  .items-page .item-action-delete {
+    min-width: 46px;
   }
 }
 

@@ -13,10 +13,9 @@ $user = current_user($pdo);
 <head><meta charset="utf-8"><title>Dashboard • CorePanel</title></head>
 <body>
   <h1>Dashboard</h1>
-
   <p>Welcome, <?= e($user['name'] ?? 'User') ?> (<?= e($user['email'] ?? '') ?>)</p>
   <p>Role: <?= e($user['role'] ?? 'user') ?></p>
-
+  <p><a href="/items/index.php">Manage Items</a></p>
   <p>
     <a href="/items/index.php">Manage Items</a> |
     <a href="/logout.php">Logout</a>
