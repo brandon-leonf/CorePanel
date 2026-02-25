@@ -26,24 +26,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   }
 }
 ?>
-<!doctype html>
-<html>
-<head><meta charset="utf-8"><title>Login • CorePanel</title></head>
-<body>
-  <h1>Login</h1>
 
-  <?php if ($errors): ?>
-    <ul>
-      <?php foreach ($errors as $err): ?><li><?= e($err) ?></li><?php endforeach; ?>
-    </ul>
-  <?php endif; ?>
+  <?php
+  require __DIR__ . '/../src/layout.php';
+  render_header('Login • CorePanel');
+  ?>
 
-  <form method="post">
-    <label>Email<br><input name="email" type="email" value="<?= e($email) ?>" required></label><br><br>
-    <label>Password<br><input name="password" type="password" required></label><br><br>
-    <button type="submit">Login</button>
-  </form>
+  <div class="container">
+    <h1>Login</h1>
 
-  <p>No account? <a href="/register.php">Register</a></p>
-</body>
-</html>
+    <?php if ($errors): ?>
+      <ul>
+        <?php foreach ($errors as $err): ?><li><?= e($err) ?></li><?php endforeach; ?>
+      </ul>
+    <?php endif; ?>
+
+    <form method="post">
+      <label>Email<br><input name="email" type="email" value="<?= e($email) ?>" required></label><br><br>
+      <label>Password<br><input name="password" type="password" required></label><br><br>
+      <button type="submit">Login</button>
+    </form>
+
+    <p>No account? <a href="/register.php">Register</a></p>
+  </div>
+
+
+<?php render_footer(); ?>

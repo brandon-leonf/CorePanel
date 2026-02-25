@@ -36,10 +36,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   }
 }
 ?>
-<!doctype html>
-<html>
-<head><meta charset="utf-8"><title>Register • CorePanel</title></head>
-<body>
+  <?php
+  require __DIR__ . '/../src/layout.php';
+  render_header('Login • CorePanel');
+  ?>
+
   <h1>Register</h1>
 
   <?php if ($errors): ?>
@@ -56,5 +57,4 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   </form>
 
   <p>Already have an account? <a href="/login.php">Login</a></p>
-</body>
-</html>
+  <?php render_footer(); ?>
