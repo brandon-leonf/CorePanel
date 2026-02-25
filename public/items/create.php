@@ -16,6 +16,11 @@ $title = '';
 $description = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+  if (!csrf_verify((string)($_POST['csrf_token'] ?? ''))) {
+    http_response_code(403);
+    exit('Invalid CSRF token');
+  }
+
   $title = trim((string)($_POST['title'] ?? ''));
   $description = trim((string)($_POST['description'] ?? ''));
 
@@ -55,6 +60,7 @@ render_header('New Item • CorePanel');
   <?php endif; ?>
 
   <form method="post" enctype="multipart/form-data">
+    <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
     <label>Title<br>
       <input name="title" value="<?= e($title) ?>" required>
     </label>

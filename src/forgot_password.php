@@ -10,6 +10,11 @@ $message = '';
 $debugLink = null;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+  if (!csrf_verify((string)($_POST['csrf_token'] ?? ''))) {
+    http_response_code(403);
+    exit('Invalid CSRF token');
+  }
+
   $email = trim((string)($_POST['email'] ?? ''));
 
   // Always respond generically (prevents email enumeration)
@@ -40,6 +45,7 @@ render_header('Forgot Password • CorePanel');
   <?php endif; ?>
 
   <form method="post">
+    <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
     <label>Email<br>
       <input name="email" type="email" required>
     </label>
@@ -53,5 +59,4 @@ render_header('Forgot Password • CorePanel');
   <p><a href="/login.php">Back to login</a></p>
 </div>
 <?php render_footer(); ?>
-
 

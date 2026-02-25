@@ -10,6 +10,11 @@ require_login();
 $user = current_user($pdo);
 $userId = (int)$user['id'];
 
+$perPage = 5; // change to 10 later if you want
+$page = max(1, (int)($_GET['page'] ?? 1));
+$offset = ($page - 1) * $perPage;
+
+
 $q = trim((string)($_GET['q'] ?? ''));
 
 if ($q !== '') {
@@ -32,6 +37,25 @@ if ($q !== '') {
   $stmt->execute([$userId]);
 }
 
+$countStmt = $pdo->prepare("SELECT COUNT(*) FROM items WHERE user_id = ?");
+$countStmt->execute([$userId]);
+$totalItems = (int)$countStmt->fetchColumn();
+
+$totalPages = max(1, (int)ceil($totalItems / $perPage));
+
+$stmt = $pdo->prepare("
+  SELECT id, title, description, image_path, created_at
+  FROM items
+  WHERE user_id = ?
+  ORDER BY created_at DESC
+  LIMIT ? OFFSET ?
+");
+
+$stmt->bindValue(1, $userId, PDO::PARAM_INT);
+$stmt->bindValue(2, $perPage, PDO::PARAM_INT);
+$stmt->bindValue(3, $offset, PDO::PARAM_INT);
+
+$stmt->execute();
 $items = $stmt->fetchAll();
 
 render_header('Items • CorePanel');
@@ -84,6 +108,7 @@ render_header('Items • CorePanel');
                     <span>Edit</span>
                   </a>
                   <form method="post" action="/items/delete.php" class="item-action-form">
+                    <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
                     <input type="hidden" name="id" value="<?= (int)$it['id'] ?>">
                     <button class="item-action-btn item-action-delete" type="submit" onclick="return confirm('Delete this item?')">
                       <i class="bi bi-trash3" aria-hidden="true"></i>
@@ -96,6 +121,18 @@ render_header('Items • CorePanel');
           <?php endforeach; ?>
         </tbody>
       </table>
+
+          <?php if ($totalPages > 1): ?>
+      <div style="margin-top:20px;">
+        <?php for ($i = 1; $i <= $totalPages; $i++): ?>
+          <?php if ($i === $page): ?>
+            <strong><?= $i ?></strong>
+          <?php else: ?>
+            <a href="?page=<?= $i ?>"><?= $i ?></a>
+          <?php endif; ?>
+        <?php endfor; ?>
+      </div>
+    <?php endif; ?>
     </div>
   <?php endif; ?>
 </div>

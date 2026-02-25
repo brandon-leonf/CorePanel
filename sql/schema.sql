@@ -36,3 +36,16 @@ CREATE TABLE IF NOT EXISTS password_resets (
     FOREIGN KEY (user_id) REFERENCES users(id)
     ON DELETE CASCADE
 ) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS admin_user_audit_logs (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  actor_user_id INT UNSIGNED NOT NULL,
+  target_user_id INT UNSIGNED NULL,
+  action VARCHAR(64) NOT NULL,
+  summary VARCHAR(255) NULL,
+  ip_address VARCHAR(45) NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_audit_created_at (created_at),
+  INDEX idx_audit_actor (actor_user_id),
+  INDEX idx_audit_target (target_user_id)
+) ENGINE=InnoDB;

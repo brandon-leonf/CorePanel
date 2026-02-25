@@ -11,6 +11,11 @@ $errors = [];
 $email = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+  if (!csrf_verify((string)($_POST['csrf_token'] ?? ''))) {
+    http_response_code(403);
+    exit('Invalid CSRF token');
+  }
+
   $email = trim((string)($_POST['email'] ?? ''));
   $pass  = (string)($_POST['password'] ?? '');
 
@@ -21,6 +26,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   if (!$u || !password_verify($pass, $u['password_hash'])) {
     $errors[] = "Invalid email or password.";
   } else {
+    session_regenerate_id(true);
     $_SESSION['user_id'] = (int)$u['id'];
     $stmtR = $pdo->prepare("SELECT role FROM users WHERE id = ?");
     $stmtR->execute([$_SESSION['user_id']]);
@@ -45,12 +51,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <?php endif; ?>
 
     <form method="post">
+      <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
       <label>Email<br><input name="email" type="email" value="<?= e($email) ?>" required></label><br><br>
       <label>Password<br><input name="password" type="password" required></label><br><br>
       <button type="submit">Login</button>
     </form>
 
-    <p>No account? <a href="/register.php">Register</a></p>
+    <p>No account? <a href="/register.php">Register</a> | <a href="/forgot_password.php">Forgot Password</a></p>
   </div>
 
 

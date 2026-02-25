@@ -12,6 +12,11 @@ $name = '';
 $email = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+  if (!csrf_verify((string)($_POST['csrf_token'] ?? ''))) {
+    http_response_code(403);
+    exit('Invalid CSRF token');
+  }
+
   $name  = trim((string)($_POST['name'] ?? ''));
   $email = trim((string)($_POST['email'] ?? ''));
   $pass  = (string)($_POST['password'] ?? '');
@@ -50,6 +55,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <?php endif; ?>
 
   <form method="post">
+    <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
     <label>Name<br><input name="name" value="<?= e($name) ?>" required></label><br><br>
     <label>Email<br><input name="email" type="email" value="<?= e($email) ?>" required></label><br><br>
     <label>Password<br><input name="password" type="password" required></label><br><br>

@@ -13,6 +13,11 @@ $success = false;
 $reset = $token ? pr_find_valid_reset($pdo, $token) : null;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+  if (!csrf_verify((string)($_POST['csrf_token'] ?? ''))) {
+    http_response_code(403);
+    exit('Invalid CSRF token');
+  }
+
   if (!$reset) {
     $errors[] = "This reset link is invalid or expired.";
   } else {
@@ -52,6 +57,7 @@ render_header('Reset Password • CorePanel');
       <p><a href="/forgot_password.php">Request a new link</a></p>
     <?php else: ?>
       <form method="post">
+        <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
         <input type="hidden" name="token" value="<?= e($token) ?>">
 
         <label>New password<br>
