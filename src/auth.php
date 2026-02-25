@@ -24,3 +24,12 @@ function current_user(PDO $pdo): ?array {
   $u = $stmt->fetch();
   return $u ?: null;
 }
+
+function require_admin(PDO $pdo): void {
+  require_login();
+  $u = current_user($pdo);
+  if (!$u || ($u['role'] ?? 'user') !== 'admin') {
+    http_response_code(403);
+    exit('Forbidden');
+  }
+}

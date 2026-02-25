@@ -22,7 +22,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $errors[] = "Invalid email or password.";
   } else {
     $_SESSION['user_id'] = (int)$u['id'];
-    redirect('/dashboard.php');
+    $stmtR = $pdo->prepare("SELECT role FROM users WHERE id = ?");
+    $stmtR->execute([$_SESSION['user_id']]);
+    $role = ($stmtR->fetch()['role'] ?? 'user');
+    redirect($role === 'admin' ? '/admin/dashboard.php' : '/client/dashboard.php');
   }
 }
 ?>
