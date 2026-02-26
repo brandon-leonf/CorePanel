@@ -30,7 +30,11 @@ $del = $pdo->prepare(
   "DELETE t
    FROM project_tasks t
    JOIN projects p ON p.id = t.project_id
-   WHERE t.id = ? AND t.project_id = ? AND t.tenant_id = ? AND p.tenant_id = ?"
+   WHERE t.id = ?
+     AND t.project_id = ?
+     AND t.tenant_id = ?
+     AND p.tenant_id = ?
+     AND p.deleted_at IS NULL"
 );
 $del->execute([$taskId, $projectId, $tenantId, $tenantId]);
 

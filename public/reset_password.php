@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 $pdo = require __DIR__ . '/../config/db.php';
 require __DIR__ . '/../src/helpers.php';
+require __DIR__ . '/../src/auth.php';
 require __DIR__ . '/../src/layout.php';
 require __DIR__ . '/../src/password_reset.php';
 require __DIR__ . '/../src/security.php';
@@ -14,6 +15,7 @@ $success = false;
 $genericResetError = 'Unable to reset password. Please request a new reset link.';
 $captchaRequired = false;
 $captchaQuestion = '';
+ensure_access_control_schema($pdo);
 
 $ip = rl_client_ip();
 $tokenFingerprint = $token !== '' ? substr(hash('sha256', $token), 0, 24) : 'missing';

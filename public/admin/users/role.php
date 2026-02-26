@@ -41,7 +41,9 @@ if ($currentRoleDb === 'admin') {
   $countAdminsStmt = $pdo->prepare(
     "SELECT COUNT(*)
      FROM users
-     WHERE role = ? AND tenant_id = ?"
+     WHERE role = ?
+       AND tenant_id = ?
+       AND deleted_at IS NULL"
   );
   $countAdminsStmt->execute(['admin', $tenantId]);
   $countAdmins = (int)$countAdminsStmt->fetchColumn();
@@ -54,7 +56,7 @@ if ($currentRoleDb === 'admin') {
   $actorStmt = $pdo->prepare(
     "SELECT id, role, password_hash, totp_secret, twofa_enabled_at
      FROM users
-     WHERE id = ? AND tenant_id = ?
+     WHERE id = ? AND tenant_id = ? AND deleted_at IS NULL
      LIMIT 1"
   );
   $actorStmt->execute([(int)$me['id'], $tenantId]);
@@ -109,7 +111,7 @@ if ($currentRoleDb === 'admin') {
   $newRole = 'admin';
 }
 
-$stmt = $pdo->prepare("UPDATE users SET role = ? WHERE id = ? AND tenant_id = ?");
+$stmt = $pdo->prepare("UPDATE users SET role = ? WHERE id = ? AND tenant_id = ? AND deleted_at IS NULL");
 $stmt->execute([$newRole, $id, $tenantId]);
 sync_user_legacy_role_binding($pdo, $id, $newRole);
 

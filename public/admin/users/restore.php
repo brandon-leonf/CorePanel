@@ -4,8 +4,8 @@ declare(strict_types=1);
 $pdo = require __DIR__ . '/../../../config/db.php';
 require __DIR__ . '/../../../src/auth.php';
 require __DIR__ . '/../../../src/helpers.php';
-require __DIR__ . '/../../../src/admin_audit.php';
 require __DIR__ . '/../../../src/security.php';
+require __DIR__ . '/../../../src/admin_audit.php';
 
 $me = require_permission($pdo, 'users.delete');
 $tenantId = actor_tenant_id($me);
@@ -21,10 +21,7 @@ if (!csrf_verify((string)($_POST['csrf_token'] ?? ''))) {
 }
 
 $id = (int)($_POST['id'] ?? 0);
-if ($id <= 0) redirect('/admin/users/index.php');
-
-// Prevent deleting yourself (safety)
-if ($me && (int)$me['id'] === $id) {
+if ($id <= 0) {
   redirect('/admin/users/index.php');
 }
 
@@ -33,7 +30,8 @@ $targetStmt = $pdo->prepare(
    FROM users
    WHERE id = ?
      AND tenant_id = ?
-     AND deleted_at IS NULL
+     AND role = 'user'
+     AND deleted_at IS NOT NULL
    LIMIT 1"
 );
 $targetStmt->execute([$id, $tenantId]);
@@ -43,69 +41,62 @@ if (!$targetUser) {
   exit('User not found');
 }
 
-if (($targetUser['role'] ?? 'user') === 'admin') {
-  http_response_code(400);
-  exit('Admin users cannot be deleted from this screen.');
-}
-
 $pdo->beginTransaction();
 try {
+  $restoreUser = $pdo->prepare(
+    "UPDATE users
+     SET deleted_at = NULL
+     WHERE id = ?
+       AND tenant_id = ?
+       AND deleted_at IS NOT NULL"
+  );
+  $restoreUser->execute([$id, $tenantId]);
+
   if (security_table_exists($pdo, 'projects')) {
-    $softDeleteProjects = $pdo->prepare(
+    $restoreProjects = $pdo->prepare(
       "UPDATE projects
-       SET deleted_at = NOW()
+       SET deleted_at = NULL
        WHERE user_id = ?
          AND tenant_id = ?
-         AND deleted_at IS NULL"
+         AND deleted_at IS NOT NULL"
     );
-    $softDeleteProjects->execute([$id, $tenantId]);
+    $restoreProjects->execute([$id, $tenantId]);
   }
 
   if (security_table_exists($pdo, 'project_payments') && security_table_exists($pdo, 'projects')) {
-    $softDeletePayments = $pdo->prepare(
+    $restorePayments = $pdo->prepare(
       "UPDATE project_payments pp
        JOIN projects p ON p.id = pp.project_id
-       SET pp.deleted_at = NOW()
+       SET pp.deleted_at = NULL
        WHERE p.user_id = ?
          AND p.tenant_id = ?
          AND pp.tenant_id = ?
-         AND pp.deleted_at IS NULL"
+         AND pp.deleted_at IS NOT NULL"
     );
-    $softDeletePayments->execute([$id, $tenantId, $tenantId]);
+    $restorePayments->execute([$id, $tenantId, $tenantId]);
   }
 
   if (security_table_exists($pdo, 'project_images') && security_table_exists($pdo, 'projects')) {
-    $softDeleteFiles = $pdo->prepare(
+    $restoreFiles = $pdo->prepare(
       "UPDATE project_images pi
        JOIN projects p ON p.id = pi.project_id
-       SET pi.deleted_at = NOW()
+       SET pi.deleted_at = NULL
        WHERE p.user_id = ?
          AND p.tenant_id = ?
          AND pi.tenant_id = ?
-         AND pi.deleted_at IS NULL"
+         AND pi.deleted_at IS NOT NULL"
     );
-    $softDeleteFiles->execute([$id, $tenantId, $tenantId]);
+    $restoreFiles->execute([$id, $tenantId, $tenantId]);
   }
 
-  $softDeleteUser = $pdo->prepare(
-    "UPDATE users
-     SET deleted_at = NOW()
-     WHERE id = ?
-       AND tenant_id = ?
-       AND deleted_at IS NULL"
+  admin_audit_log(
+    $pdo,
+    (int)$me['id'],
+    'restore_user',
+    $id,
+    "Restored user {$targetUser['email']} ({$targetUser['role']})",
+    $tenantId
   );
-  $softDeleteUser->execute([$id, $tenantId]);
-
-  if ($me) {
-    admin_audit_log(
-      $pdo,
-      (int)$me['id'],
-      'soft_delete_user',
-      $id,
-      "Soft deleted user {$targetUser['email']} ({$targetUser['role']})",
-      $tenantId
-    );
-  }
 
   $pdo->commit();
 } catch (Throwable $e) {

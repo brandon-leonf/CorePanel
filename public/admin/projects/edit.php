@@ -29,12 +29,16 @@ $canManageTasks = user_has_permission($me, 'project_tasks.edit.any') || ($ownsPr
 $canDeleteTasks = user_has_permission($me, 'project_tasks.delete.any') || ($ownsProject && user_has_permission($me, 'project_tasks.delete.own'));
 $canManageImages = user_has_permission($me, 'project_images.manage.any') || ($ownsProject && user_has_permission($me, 'project_images.manage.own'));
 $canCreatePayments = user_has_permission($me, 'payments.create');
+$canManagePayments = $canCreatePayments;
 
 $pstmt = $pdo->prepare("
   SELECT p.*, u.name AS client_name, u.email AS client_email
   FROM projects p
   JOIN users u ON u.id = p.user_id
-  WHERE p.id = ? AND p.tenant_id = ?
+  WHERE p.id = ?
+    AND p.tenant_id = ?
+    AND p.deleted_at IS NULL
+    AND u.deleted_at IS NULL
   LIMIT 1
 ");
 $pstmt->execute([$id, $tenantId]);
@@ -56,9 +60,12 @@ if ($projectServerUploadLimitBytes > 0) {
 $projectPdfMaxLabel = upload_human_bytes($projectPdfMaxBytes);
 $projectImages = [];
 $projectDocuments = [];
+$deletedProjectImages = [];
+$deletedProjectDocuments = [];
 $projectImagesEnabled = true;
 $projectImagesError = '';
 $projectPayments = [];
+$deletedProjectPayments = [];
 $projectPaymentsError = '';
 $paymentReceivedAtInput = (new DateTimeImmutable())->format('Y-m-d\TH:i');
 $paymentAmountInput = '';
@@ -87,13 +94,23 @@ try {
       tenant_id INT UNSIGNED NOT NULL DEFAULT 1,
       image_path VARCHAR(255) NOT NULL,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      deleted_at DATETIME NULL,
       INDEX idx_project_images_project_id (project_id),
       INDEX idx_project_images_tenant_id (tenant_id),
+      INDEX idx_project_images_deleted_at (deleted_at),
       CONSTRAINT fk_project_images_project
         FOREIGN KEY (project_id) REFERENCES projects(id)
         ON DELETE CASCADE
     ) ENGINE=InnoDB
   ");
+  if (!db_has_column($pdo, 'project_images', 'deleted_at')) {
+    $pdo->exec("ALTER TABLE project_images ADD COLUMN deleted_at DATETIME NULL AFTER created_at");
+  }
+  try {
+    $pdo->exec("ALTER TABLE project_images ADD INDEX idx_project_images_deleted_at (deleted_at)");
+  } catch (Throwable $e) {
+    // Index may already exist.
+  }
 } catch (Throwable $e) {
   $projectImagesEnabled = false;
   $projectImagesError = 'Project images are not available yet.';
@@ -162,7 +179,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'updat
     $params[] = $tenantId;
 
     $up = $pdo->prepare(
-      'UPDATE projects SET ' . implode(', ', $setClauses) . ' WHERE id = ? AND tenant_id = ?'
+      'UPDATE projects SET ' . implode(', ', $setClauses) . ' WHERE id = ? AND tenant_id = ? AND deleted_at IS NULL'
     );
     $up->execute($params);
     redirect('/admin/projects/edit.php?id=' . $id);
@@ -397,6 +414,128 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'add_p
   }
 }
 
+/** Soft delete project payment */
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delete_project_payment') {
+  if (!csrf_verify((string)($_POST['csrf_token'] ?? ''))) {
+    http_response_code(403);
+    exit('Invalid CSRF token');
+  }
+  if (!$canManagePayments) {
+    http_response_code(403);
+    exit('Forbidden');
+  }
+  if (!$projectPaymentsEnabled) {
+    $errors[] = 'Payments are not available yet.';
+  } else {
+    $paymentId = (int)($_POST['payment_id'] ?? 0);
+    if ($paymentId <= 0) {
+      $errors[] = 'Invalid payment.';
+    } else {
+      $paymentStmt = $pdo->prepare(
+        "SELECT id, amount, method
+         FROM project_payments
+         WHERE id = ?
+           AND project_id = ?
+           AND tenant_id = ?
+           AND deleted_at IS NULL
+         LIMIT 1"
+      );
+      $paymentStmt->execute([$paymentId, $id, $tenantId]);
+      $payment = $paymentStmt->fetch();
+
+      if (!$payment) {
+        $errors[] = 'Payment not found.';
+      } else {
+        $softDeletePayment = $pdo->prepare(
+          "UPDATE project_payments
+           SET deleted_at = NOW()
+           WHERE id = ?
+             AND project_id = ?
+             AND tenant_id = ?
+             AND deleted_at IS NULL"
+        );
+        $softDeletePayment->execute([$paymentId, $id, $tenantId]);
+        admin_audit_log(
+          $pdo,
+          (int)$me['id'],
+          'project_payment.delete',
+          (int)$project['user_id'],
+          sprintf(
+            'Soft deleted payment #%d of $%s (%s) for project %s',
+            $paymentId,
+            number_format((float)$payment['amount'], 2, '.', ''),
+            (string)$payment['method'],
+            (string)$project['project_no']
+          ),
+          $tenantId
+        );
+        redirect('/admin/projects/edit.php?id=' . $id);
+      }
+    }
+  }
+}
+
+/** Restore project payment */
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'restore_project_payment') {
+  if (!csrf_verify((string)($_POST['csrf_token'] ?? ''))) {
+    http_response_code(403);
+    exit('Invalid CSRF token');
+  }
+  if (!$canManagePayments) {
+    http_response_code(403);
+    exit('Forbidden');
+  }
+  if (!$projectPaymentsEnabled) {
+    $errors[] = 'Payments are not available yet.';
+  } else {
+    $paymentId = (int)($_POST['payment_id'] ?? 0);
+    if ($paymentId <= 0) {
+      $errors[] = 'Invalid payment.';
+    } else {
+      $paymentStmt = $pdo->prepare(
+        "SELECT id, amount, method
+         FROM project_payments
+         WHERE id = ?
+           AND project_id = ?
+           AND tenant_id = ?
+           AND deleted_at IS NOT NULL
+         LIMIT 1"
+      );
+      $paymentStmt->execute([$paymentId, $id, $tenantId]);
+      $payment = $paymentStmt->fetch();
+
+      if (!$payment) {
+        $errors[] = 'Payment not found.';
+      } else {
+        $restorePayment = $pdo->prepare(
+          "UPDATE project_payments
+           SET deleted_at = NULL
+           WHERE id = ?
+             AND project_id = ?
+             AND tenant_id = ?
+             AND deleted_at IS NOT NULL"
+        );
+        $restorePayment->execute([$paymentId, $id, $tenantId]);
+        admin_audit_log(
+          $pdo,
+          (int)$me['id'],
+          'project_payment.restore',
+          (int)$project['user_id'],
+          sprintf(
+            'Restored payment #%d of $%s (%s) for project %s',
+            $paymentId,
+            number_format((float)$payment['amount'], 2, '.', ''),
+            (string)$payment['method'],
+            (string)$project['project_no']
+          ),
+          $tenantId
+        );
+        redirect('/admin/projects/edit.php?id=' . $id);
+      }
+    }
+  }
+}
+
 /** Add project images */
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'add_project_images') {
   if (!csrf_verify((string)($_POST['csrf_token'] ?? ''))) {
@@ -511,7 +650,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'add_p
   }
 }
 
-/** Delete project image */
+/** Soft delete project file */
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delete_project_image') {
   if (!csrf_verify((string)($_POST['csrf_token'] ?? ''))) {
     http_response_code(403);
@@ -537,6 +676,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delet
           AND i.project_id = ?
           AND i.tenant_id = ?
           AND p.tenant_id = ?
+          AND p.deleted_at IS NULL
+          AND i.deleted_at IS NULL
         LIMIT 1
       ");
       $imgStmt->execute([$imageId, $id, $tenantId, $tenantId]);
@@ -545,21 +686,74 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delet
       if (!$img) {
         $errors[] = 'Image not found.';
       } else {
-        $imagePath = (string)($img['image_path'] ?? '');
         $delImg = $pdo->prepare("
-          DELETE i
-          FROM project_images i
+          UPDATE project_images i
           JOIN projects p ON p.id = i.project_id
+          SET i.deleted_at = NOW()
           WHERE i.id = ?
             AND i.project_id = ?
             AND i.tenant_id = ?
             AND p.tenant_id = ?
+            AND p.deleted_at IS NULL
+            AND i.deleted_at IS NULL
         ");
         $delImg->execute([$imageId, $id, $tenantId, $tenantId]);
-        upload_delete_reference_if_unreferenced($pdo, $imagePath);
+        admin_audit_log(
+          $pdo,
+          (int)$me['id'],
+          'project_file.delete',
+          (int)$project['user_id'],
+          'Soft deleted project file #' . $imageId . ' for project ' . (string)$project['project_no'],
+          $tenantId
+        );
 
         redirect('/admin/projects/edit.php?id=' . $id);
       }
+    }
+  }
+}
+
+/** Restore project file */
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'restore_project_image') {
+  if (!csrf_verify((string)($_POST['csrf_token'] ?? ''))) {
+    http_response_code(403);
+    exit('Invalid CSRF token');
+  }
+  if (!$canManageImages) {
+    http_response_code(403);
+    exit('Forbidden');
+  }
+
+  if (!$projectImagesEnabled) {
+    $errors[] = 'Project files are not available yet.';
+  } else {
+    $imageId = (int)($_POST['image_id'] ?? 0);
+    if ($imageId <= 0) {
+      $errors[] = 'Invalid file.';
+    } else {
+      $restoreImg = $pdo->prepare("
+        UPDATE project_images i
+        JOIN projects p ON p.id = i.project_id
+        SET i.deleted_at = NULL
+        WHERE i.id = ?
+          AND i.project_id = ?
+          AND i.tenant_id = ?
+          AND p.tenant_id = ?
+          AND p.deleted_at IS NULL
+          AND i.deleted_at IS NOT NULL
+      ");
+      $restoreImg->execute([$imageId, $id, $tenantId, $tenantId]);
+      if ($restoreImg->rowCount() > 0) {
+        admin_audit_log(
+          $pdo,
+          (int)$me['id'],
+          'project_file.restore',
+          (int)$project['user_id'],
+          'Restored project file #' . $imageId . ' for project ' . (string)$project['project_no'],
+          $tenantId
+        );
+      }
+      redirect('/admin/projects/edit.php?id=' . $id);
     }
   }
 }
@@ -571,6 +765,7 @@ $tstmt = $pdo->prepare(
    WHERE t.project_id = ?
      AND t.tenant_id = ?
      AND p.tenant_id = ?
+     AND p.deleted_at IS NULL
    ORDER BY t.id DESC"
 );
 $tstmt->execute([$id, $tenantId, $tenantId]);
@@ -595,10 +790,30 @@ if ($projectPaymentsEnabled) {
        WHERE pp.project_id = ?
          AND pp.tenant_id = ?
          AND p.tenant_id = ?
+         AND p.deleted_at IS NULL
+         AND pp.deleted_at IS NULL
        ORDER BY pp.received_at DESC, pp.id DESC"
     );
     $paymentListStmt->execute([$id, $tenantId, $tenantId]);
     $projectPayments = $paymentListStmt->fetchAll() ?: [];
+
+    $deletedPaymentListStmt = $pdo->prepare(
+      "SELECT pp.id, pp.received_at, pp.amount, pp.method, pp.reference, pp.note, pp.created_at, pp.deleted_at,
+              u.name AS created_by_name, u.email AS created_by_email,
+              {$receiptSelect}
+       FROM project_payments pp
+       JOIN projects p ON p.id = pp.project_id
+       LEFT JOIN users u ON u.id = pp.created_by
+       {$receiptJoin}
+       WHERE pp.project_id = ?
+         AND pp.tenant_id = ?
+         AND p.tenant_id = ?
+         AND p.deleted_at IS NULL
+         AND pp.deleted_at IS NOT NULL
+       ORDER BY pp.deleted_at DESC, pp.id DESC"
+    );
+    $deletedPaymentListStmt->execute([$id, $tenantId, $tenantId]);
+    $deletedProjectPayments = $deletedPaymentListStmt->fetchAll() ?: [];
   } catch (Throwable $e) {
     $projectPaymentsError = 'Payments are not available yet.';
   }
@@ -613,6 +828,8 @@ if ($projectImagesEnabled) {
       WHERE i.project_id = ?
         AND i.tenant_id = ?
         AND p.tenant_id = ?
+        AND p.deleted_at IS NULL
+        AND i.deleted_at IS NULL
       ORDER BY i.id DESC
     ");
     $imgListStmt->execute([$id, $tenantId, $tenantId]);
@@ -623,6 +840,28 @@ if ($projectImagesEnabled) {
         $projectDocuments[] = $media;
       } elseif (upload_reference_is_image($reference)) {
         $projectImages[] = $media;
+      }
+    }
+
+    $deletedImgListStmt = $pdo->prepare("
+      SELECT i.id, i.image_path, i.created_at, i.deleted_at
+      FROM project_images i
+      JOIN projects p ON p.id = i.project_id
+      WHERE i.project_id = ?
+        AND i.tenant_id = ?
+        AND p.tenant_id = ?
+        AND p.deleted_at IS NULL
+        AND i.deleted_at IS NOT NULL
+      ORDER BY i.deleted_at DESC, i.id DESC
+    ");
+    $deletedImgListStmt->execute([$id, $tenantId, $tenantId]);
+    $deletedProjectMedia = $deletedImgListStmt->fetchAll() ?: [];
+    foreach ($deletedProjectMedia as $media) {
+      $reference = (string)($media['image_path'] ?? '');
+      if (upload_reference_is_pdf($reference)) {
+        $deletedProjectDocuments[] = $media;
+      } elseif (upload_reference_is_image($reference)) {
+        $deletedProjectImages[] = $media;
       }
     }
   } catch (Throwable $e) {
@@ -790,7 +1029,7 @@ render_header('Edit Project • Admin • CorePanel');
                 <button
                   type="submit"
                   class="admin-project-edit-image-delete-btn"
-                  data-confirm="Delete this image?"
+                  data-confirm="Delete this image? You can restore it later."
                 >
                   Delete Image
                 </button>
@@ -824,9 +1063,69 @@ render_header('Edit Project • Admin • CorePanel');
                   <button
                     type="submit"
                     class="admin-project-edit-document-delete-btn"
-                    data-confirm="Delete this file?"
+                    data-confirm="Delete this file? You can restore it later."
                   >
                     Delete
+                  </button>
+                </form>
+              </div>
+            </div>
+          <?php endforeach; ?>
+        </div>
+      <?php endif; ?>
+
+      <?php if ($deletedProjectImages || $deletedProjectDocuments): ?>
+        <h3 class="admin-project-edit-documents-title">Deleted Files</h3>
+      <?php endif; ?>
+
+      <?php if ($deletedProjectImages): ?>
+        <p class="admin-project-edit-images-note">Deleted Images</p>
+        <div class="admin-project-edit-documents-list">
+          <?php foreach ($deletedProjectImages as $deletedImg): ?>
+            <?php $deletedImgName = upload_reference_filename((string)$deletedImg['image_path']) ?? ('Image #' . (int)$deletedImg['id']); ?>
+            <div class="admin-project-edit-document-item">
+              <div class="admin-project-edit-document-meta">
+                <strong><?= e($deletedImgName) ?></strong>
+                <small>Deleted: <?= e((string)($deletedImg['deleted_at'] ?? '')) ?></small>
+              </div>
+              <div class="admin-project-edit-document-actions">
+                <form method="post" class="admin-project-edit-image-delete-form">
+                  <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
+                  <input type="hidden" name="action" value="restore_project_image">
+                  <input type="hidden" name="image_id" value="<?= (int)$deletedImg['id'] ?>">
+                  <button
+                    type="submit"
+                    class="admin-project-edit-media-link"
+                  >
+                    Restore
+                  </button>
+                </form>
+              </div>
+            </div>
+          <?php endforeach; ?>
+        </div>
+      <?php endif; ?>
+
+      <?php if ($deletedProjectDocuments): ?>
+        <p class="admin-project-edit-images-note">Deleted PDFs</p>
+        <div class="admin-project-edit-documents-list">
+          <?php foreach ($deletedProjectDocuments as $deletedDoc): ?>
+            <?php $deletedDocName = upload_reference_filename((string)$deletedDoc['image_path']) ?? ('Document #' . (int)$deletedDoc['id']); ?>
+            <div class="admin-project-edit-document-item">
+              <div class="admin-project-edit-document-meta">
+                <strong><?= e($deletedDocName) ?></strong>
+                <small>Deleted: <?= e((string)($deletedDoc['deleted_at'] ?? '')) ?></small>
+              </div>
+              <div class="admin-project-edit-document-actions">
+                <form method="post" class="admin-project-edit-image-delete-form">
+                  <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
+                  <input type="hidden" name="action" value="restore_project_image">
+                  <input type="hidden" name="image_id" value="<?= (int)$deletedDoc['id'] ?>">
+                  <button
+                    type="submit"
+                    class="admin-project-edit-media-link"
+                  >
+                    Restore
                   </button>
                 </form>
               </div>
@@ -932,12 +1231,13 @@ render_header('Edit Project • Admin • CorePanel');
               <th>Note</th>
               <th>Receipt</th>
               <th>Added By</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
             <?php if (!$projectPayments): ?>
               <tr>
-                <td colspan="7">No payments recorded yet.</td>
+                <td colspan="8">No payments recorded yet.</td>
               </tr>
             <?php else: ?>
               <?php foreach ($projectPayments as $payment): ?>
@@ -971,6 +1271,74 @@ render_header('Edit Project • Admin • CorePanel');
                     <?php endif; ?>
                   </td>
                   <td><?= e($createdByLabel) ?></td>
+                  <td>
+                    <?php if ($canManagePayments): ?>
+                      <form method="post" class="admin-project-edit-image-delete-form">
+                        <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
+                        <input type="hidden" name="action" value="delete_project_payment">
+                        <input type="hidden" name="payment_id" value="<?= (int)$payment['id'] ?>">
+                        <button
+                          type="submit"
+                          class="admin-project-edit-document-delete-btn"
+                          data-confirm="Delete this payment? You can restore it later."
+                        >
+                          Delete
+                        </button>
+                      </form>
+                    <?php else: ?>
+                      <span class="status-text">-</span>
+                    <?php endif; ?>
+                  </td>
+                </tr>
+              <?php endforeach; ?>
+            <?php endif; ?>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="admin-project-edit-payments-table-wrap">
+        <h3 class="admin-project-edit-documents-title">Deleted Payments</h3>
+        <table class="admin-project-edit-payments-table" border="1" cellpadding="8" cellspacing="0">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Amount</th>
+              <th>Method</th>
+              <th>Reference</th>
+              <th>Deleted At</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <?php if (!$deletedProjectPayments): ?>
+              <tr>
+                <td colspan="6">No deleted payments.</td>
+              </tr>
+            <?php else: ?>
+              <?php foreach ($deletedProjectPayments as $payment): ?>
+                <tr>
+                  <td><?= e((string)$payment['received_at']) ?></td>
+                  <td>$<?= number_format((float)$payment['amount'], 2) ?></td>
+                  <td><?= e(project_payment_method_label((string)$payment['method'])) ?></td>
+                  <td><?= e((string)($payment['reference'] ?? '')) ?></td>
+                  <td><?= e((string)($payment['deleted_at'] ?? '')) ?></td>
+                  <td>
+                    <?php if ($canManagePayments): ?>
+                      <form method="post" class="admin-project-edit-image-delete-form">
+                        <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
+                        <input type="hidden" name="action" value="restore_project_payment">
+                        <input type="hidden" name="payment_id" value="<?= (int)$payment['id'] ?>">
+                        <button
+                          type="submit"
+                          class="admin-project-edit-media-link"
+                        >
+                          Restore
+                        </button>
+                      </form>
+                    <?php else: ?>
+                      <span class="status-text">-</span>
+                    <?php endif; ?>
+                  </td>
                 </tr>
               <?php endforeach; ?>
             <?php endif; ?>

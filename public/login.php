@@ -16,6 +16,7 @@ clear_pending_twofa_session();
 $errors = [];
 $email = '';
 $twofaColumnsReady = ensure_user_twofa_columns($pdo);
+ensure_access_control_schema($pdo);
 $captchaRequired = false;
 $captchaQuestion = '';
 
@@ -67,13 +68,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       $stmt = $pdo->prepare(
         "SELECT id, password_hash, role, totp_secret, twofa_enabled_at
          FROM users
-         WHERE email = ?"
+         WHERE email = ?
+           AND deleted_at IS NULL"
       );
     } else {
       $stmt = $pdo->prepare(
         "SELECT id, password_hash, role
          FROM users
-         WHERE email = ?"
+         WHERE email = ?
+           AND deleted_at IS NULL"
       );
     }
     $stmt->execute([$email]);
@@ -94,7 +97,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
       if (password_needs_secure_rehash((string)$u['password_hash'])) {
         $newHash = hash_password_secure($pass);
-        $pdo->prepare("UPDATE users SET password_hash = ? WHERE id = ?")
+        $pdo->prepare("UPDATE users SET password_hash = ? WHERE id = ? AND deleted_at IS NULL")
             ->execute([$newHash, (int)$u['id']]);
       }
     } catch (Throwable $e) {

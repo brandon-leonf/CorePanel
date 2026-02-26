@@ -522,10 +522,21 @@ function ac_ensure_tenant_model(PDO $pdo): void {
   } catch (Throwable $e) {
     // index may already exist
   }
+  if (!ac_column_exists($pdo, 'users', 'deleted_at')) {
+    $pdo->exec("ALTER TABLE users ADD COLUMN deleted_at DATETIME NULL AFTER created_at");
+  }
+  try {
+    $pdo->exec("ALTER TABLE users ADD INDEX idx_users_deleted_at (deleted_at)");
+  } catch (Throwable $e) {
+    // index may already exist
+  }
 
   if (ac_table_exists($pdo, 'projects')) {
     if (!ac_column_exists($pdo, 'projects', 'tenant_id')) {
       $pdo->exec("ALTER TABLE projects ADD COLUMN tenant_id INT UNSIGNED NOT NULL DEFAULT 1 AFTER user_id");
+    }
+    if (!ac_column_exists($pdo, 'projects', 'deleted_at')) {
+      $pdo->exec("ALTER TABLE projects ADD COLUMN deleted_at DATETIME NULL AFTER created_at");
     }
     $pdo->exec(
       "UPDATE projects p
@@ -535,6 +546,11 @@ function ac_ensure_tenant_model(PDO $pdo): void {
     );
     try {
       $pdo->exec("ALTER TABLE projects ADD INDEX idx_projects_tenant_id (tenant_id)");
+    } catch (Throwable $e) {
+      // index may already exist
+    }
+    try {
+      $pdo->exec("ALTER TABLE projects ADD INDEX idx_projects_deleted_at (deleted_at)");
     } catch (Throwable $e) {
       // index may already exist
     }
@@ -580,6 +596,9 @@ function ac_ensure_tenant_model(PDO $pdo): void {
     if (!ac_column_exists($pdo, 'project_images', 'tenant_id')) {
       $pdo->exec("ALTER TABLE project_images ADD COLUMN tenant_id INT UNSIGNED NOT NULL DEFAULT 1 AFTER project_id");
     }
+    if (!ac_column_exists($pdo, 'project_images', 'deleted_at')) {
+      $pdo->exec("ALTER TABLE project_images ADD COLUMN deleted_at DATETIME NULL AFTER created_at");
+    }
     if (ac_table_exists($pdo, 'projects')) {
       $pdo->exec(
         "UPDATE project_images i
@@ -590,6 +609,22 @@ function ac_ensure_tenant_model(PDO $pdo): void {
     }
     try {
       $pdo->exec("ALTER TABLE project_images ADD INDEX idx_project_images_tenant_id (tenant_id)");
+    } catch (Throwable $e) {
+      // index may already exist
+    }
+    try {
+      $pdo->exec("ALTER TABLE project_images ADD INDEX idx_project_images_deleted_at (deleted_at)");
+    } catch (Throwable $e) {
+      // index may already exist
+    }
+  }
+
+  if (ac_table_exists($pdo, 'project_payments')) {
+    if (!ac_column_exists($pdo, 'project_payments', 'deleted_at')) {
+      $pdo->exec("ALTER TABLE project_payments ADD COLUMN deleted_at DATETIME NULL AFTER created_at");
+    }
+    try {
+      $pdo->exec("ALTER TABLE project_payments ADD INDEX idx_project_payments_deleted_at (deleted_at)");
     } catch (Throwable $e) {
       // index may already exist
     }
@@ -670,6 +705,8 @@ function ac_seed_rbac_defaults(PDO $pdo): void {
     'projects.create' => 'Create projects',
     'projects.edit.any' => 'Edit any tenant project',
     'projects.edit.own' => 'Edit own projects',
+    'projects.delete.any' => 'Delete any tenant project',
+    'projects.delete.own' => 'Delete own projects',
     'projects.print.any' => 'Print any tenant project',
     'projects.print.own' => 'Print own projects',
     'project_tasks.edit.any' => 'Edit any tenant project task',
@@ -716,6 +753,7 @@ function ac_seed_rbac_defaults(PDO $pdo): void {
       'projects.view.any',
       'projects.create',
       'projects.edit.any',
+      'projects.delete.any',
       'projects.print.any',
       'project_tasks.edit.any',
       'project_tasks.delete.any',
@@ -912,6 +950,7 @@ function require_user_in_tenant(PDO $pdo, array $actor, int $targetUserId): arra
     "SELECT id, name, email, role, tenant_id
      FROM users
      WHERE id = ?
+       AND deleted_at IS NULL
      LIMIT 1"
   );
   $stmt->execute([$targetUserId]);
@@ -932,6 +971,7 @@ function require_user_in_tenant(PDO $pdo, array $actor, int $targetUserId): arra
 function project_action_permission_pair(string $action): array {
   return match ($action) {
     'edit' => ['projects.edit.any', 'projects.edit.own'],
+    'delete' => ['projects.delete.any', 'projects.delete.own'],
     'print' => ['projects.print.any', 'projects.print.own'],
     'task_edit' => ['project_tasks.edit.any', 'project_tasks.edit.own'],
     'task_delete' => ['project_tasks.delete.any', 'project_tasks.delete.own'],
@@ -945,6 +985,7 @@ function require_project_access(PDO $pdo, array $actor, int $projectId, string $
     "SELECT id, user_id, tenant_id
      FROM projects
      WHERE id = ?
+       AND deleted_at IS NULL
      LIMIT 1"
   );
   $stmt->execute([$projectId]);
@@ -982,7 +1023,7 @@ function current_user(PDO $pdo): ?array {
 
   $accessReady = ensure_access_control_schema($pdo);
   $selectSql = $accessReady
-    ? "SELECT id, name, email, role, tenant_id FROM users WHERE id = ?"
+    ? "SELECT id, name, email, role, tenant_id FROM users WHERE id = ? AND deleted_at IS NULL"
     : "SELECT id, name, email, role, 1 AS tenant_id FROM users WHERE id = ?";
   $stmt = $pdo->prepare($selectSql);
   $stmt->execute([$_SESSION['user_id']]);

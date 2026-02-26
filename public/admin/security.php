@@ -44,6 +44,7 @@ $stmt = $pdo->prepare(
   "SELECT id, name, email, role, totp_secret, twofa_enabled_at
    FROM users
    WHERE id = ?
+     AND deleted_at IS NULL
    LIMIT 1"
 );
 $stmt->execute([(int)$me['id']]);
@@ -99,7 +100,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       $up = $pdo->prepare(
         "UPDATE users
          SET totp_secret = ?, twofa_enabled_at = NOW()
-         WHERE id = ? AND role = 'admin'"
+         WHERE id = ? AND role = 'admin' AND deleted_at IS NULL"
       );
       $up->execute([$storedSecret, (int)$admin['id']]);
       unset($_SESSION['twofa_enroll_secret']);
@@ -123,7 +124,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $up = $pdo->prepare(
       "UPDATE users
        SET totp_secret = NULL, twofa_enabled_at = NULL
-       WHERE id = ? AND role = 'admin'"
+       WHERE id = ? AND role = 'admin' AND deleted_at IS NULL"
     );
     $up->execute([(int)$admin['id']]);
     unset($_SESSION['twofa_enroll_secret']);

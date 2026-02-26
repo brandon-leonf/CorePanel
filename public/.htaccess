@@ -35,6 +35,8 @@ Options -Indexes
 
 <IfModule mod_rewrite.c>
   RewriteEngine On
+  RewriteRule ^health/?$ health.php [L,NC]
+  RewriteRule ^health/db/?$ health_db.php [L,NC]
   # Legacy uploads must never be served directly; use /file.php authorization gate.
   RewriteRule ^uploads(?:/.*)?$ - [F,L,NC]
 </IfModule>

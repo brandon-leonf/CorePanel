@@ -17,6 +17,13 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
   exit;
 }
 
+$rateKeys = [rl_key_ip(rl_client_ip())];
+$rateState = rl_precheck($pdo, 'csp_report_ingest', $rateKeys);
+if ((bool)($rateState['blocked'] ?? false)) {
+  http_response_code(204);
+  exit;
+}
+
 $raw = file_get_contents('php://input');
 if (!is_string($raw) || trim($raw) === '') {
   http_response_code(204);
@@ -61,5 +68,6 @@ $detailPayload = [
 
 $details = (string)json_encode($detailPayload, JSON_UNESCAPED_SLASHES);
 rl_log_event($pdo, 'csp_report', 'csp', $subject, $keyLabel, $details, 'warning');
+rl_register_attempt($pdo, 'csp_report_ingest', $rateKeys, null, 'accepted', false);
 
 http_response_code(204);

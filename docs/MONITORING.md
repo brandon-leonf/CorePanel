@@ -97,3 +97,44 @@ See `config/security.env.example`:
 ## Admin Visibility
 
 `/public/admin/security.php` now includes a "Recent Security Alerts" section from `security_event_logs`.
+
+## Health Endpoints (Protected)
+
+CorePanel exposes two JSON health endpoints:
+
+- `/health`
+- `/health/db`
+
+Both endpoints are protected and require either:
+
+- Admin session (`dashboard.admin.view`/`security.manage`), or
+- `COREPANEL_HEALTH_TOKEN` via:
+  - `X-Health-Token` header,
+  - `Authorization: Bearer <token>`, or
+  - `?token=<token>` query parameter.
+
+`/health` checks:
+
+- DB connectivity/query (`SELECT 1`)
+- Disk free space threshold
+- Encryption key readiness (`COREPANEL_FIELD_KEY(S)`)
+- Queue health (configurable mode)
+
+`/health/db` checks DB only.
+
+Status codes:
+
+- `200` when all required checks pass
+- `503` when at least one check fails
+- `403` when unauthorized
+
+Config knobs in `config/security.env.example`:
+
+- `COREPANEL_HEALTH_TOKEN`
+- `COREPANEL_HEALTH_DISK_PATH`
+- `COREPANEL_HEALTH_MIN_DISK_FREE_MB`
+- `COREPANEL_HEALTH_QUEUE_MODE` (`none|db|filesystem`)
+- `COREPANEL_HEALTH_QUEUE_TABLE`
+- `COREPANEL_HEALTH_QUEUE_DIR`
+- `COREPANEL_HEALTH_QUEUE_HEARTBEAT_FILE`
+- `COREPANEL_HEALTH_QUEUE_HEARTBEAT_MAX_AGE_SECONDS`

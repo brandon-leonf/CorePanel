@@ -23,7 +23,10 @@ require_project_access($pdo, $me, $id, 'view');
 $pstmt = $pdo->prepare(
   "SELECT id, project_no, title, description, notes, project_address, status, created_at
    FROM projects
-   WHERE id = ? AND user_id = ? AND tenant_id = ?
+   WHERE id = ?
+     AND user_id = ?
+     AND tenant_id = ?
+     AND deleted_at IS NULL
    LIMIT 1"
 );
 $pstmt->execute([$id, $userId, $tenantId]);
@@ -107,6 +110,7 @@ $tstmt = $pdo->prepare(
      AND t.tenant_id = ?
      AND p.user_id = ?
      AND p.tenant_id = ?
+     AND p.deleted_at IS NULL
    ORDER BY t.id DESC"
 );
 $tstmt->execute([$id, $tenantId, $userId, $tenantId]);
@@ -125,6 +129,8 @@ try {
       AND i.tenant_id = ?
       AND p.user_id = ?
       AND p.tenant_id = ?
+      AND p.deleted_at IS NULL
+      AND i.deleted_at IS NULL
     ORDER BY i.id DESC
   ");
   $imgStmt->execute([$id, $tenantId, $userId, $tenantId]);
@@ -162,6 +168,8 @@ if ($projectPaymentsAvailable) {
          AND pp.tenant_id = ?
          AND p.user_id = ?
          AND p.tenant_id = ?
+         AND p.deleted_at IS NULL
+         AND pp.deleted_at IS NULL
        ORDER BY pp.received_at DESC, pp.id DESC"
     );
     $paymentStmt->execute([$id, $tenantId, $userId, $tenantId]);

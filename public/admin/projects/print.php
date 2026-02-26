@@ -35,7 +35,10 @@ $pstmt = $pdo->prepare(
      u.email AS client_email
    FROM projects p
    JOIN users u ON u.id = p.user_id
-   WHERE p.id = ? AND p.tenant_id = ?
+   WHERE p.id = ?
+     AND p.tenant_id = ?
+     AND p.deleted_at IS NULL
+     AND u.deleted_at IS NULL
    LIMIT 1"
 );
 $pstmt->execute([$id, $tenantId]);
@@ -57,6 +60,7 @@ $tstmt = $pdo->prepare("
   WHERE t.project_id = ?
     AND t.tenant_id = ?
     AND p.tenant_id = ?
+    AND p.deleted_at IS NULL
   ORDER BY t.id ASC
 ");
 $tstmt->execute([$id, $tenantId, $tenantId]);

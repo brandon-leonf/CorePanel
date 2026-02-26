@@ -65,6 +65,8 @@ $stmt = $pdo->prepare(
      AND pp.project_id = ?
      AND pp.tenant_id = ?
      AND p.tenant_id = pp.tenant_id
+     AND p.deleted_at IS NULL
+     AND pp.deleted_at IS NULL
      {$ownershipFilterSql}
    LIMIT 1"
 );

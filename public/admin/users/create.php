@@ -29,10 +29,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   validate_required_text($name, 'Name', 100, $errors);
 
   if (!$errors) {
-    $exists = $pdo->prepare("SELECT id FROM users WHERE email = ?");
+    $exists = $pdo->prepare("SELECT id, deleted_at FROM users WHERE email = ? LIMIT 1");
     $exists->execute([$email]);
-    if ($exists->fetch()) {
-      $errors[] = "Email already exists.";
+    $existingUser = $exists->fetch();
+    if ($existingUser) {
+      if (trim((string)($existingUser['deleted_at'] ?? '')) !== '') {
+        $errors[] = 'Email belongs to a deleted client. Restore that client from Manage Users.';
+      } else {
+        $errors[] = 'Email already exists.';
+      }
     } else {
       try {
         $tempPass = generate_temporary_password(16);

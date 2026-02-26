@@ -22,7 +22,11 @@ $stmt = $pdo->prepare("
   SELECT t.*, p.project_no, p.title AS project_title
   FROM project_tasks t
   JOIN projects p ON p.id = t.project_id
-  WHERE t.id = ? AND t.project_id = ? AND t.tenant_id = ? AND p.tenant_id = ?
+  WHERE t.id = ?
+    AND t.project_id = ?
+    AND t.tenant_id = ?
+    AND p.tenant_id = ?
+    AND p.deleted_at IS NULL
   LIMIT 1
 ");
 $stmt->execute([$taskId, $projectId, $tenantId, $tenantId]);
@@ -68,7 +72,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       UPDATE project_tasks t
       JOIN projects p ON p.id = t.project_id
       SET task_title = ?, task_description = ?, rate = ?, quantity = ?, amount = ?, status = ?
-      WHERE t.id = ? AND t.project_id = ? AND t.tenant_id = ? AND p.tenant_id = ?
+      WHERE t.id = ?
+        AND t.project_id = ?
+        AND t.tenant_id = ?
+        AND p.tenant_id = ?
+        AND p.deleted_at IS NULL
     ");
     $up->execute([
       $taskTitle,

@@ -39,9 +39,11 @@ function ensure_project_payments_table(PDO $pdo): bool {
         note TEXT NULL,
         created_by INT UNSIGNED NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        deleted_at DATETIME NULL,
         INDEX idx_project_payments_project (project_id, tenant_id, received_at),
         INDEX idx_project_payments_tenant (tenant_id, received_at),
         INDEX idx_project_payments_created_by (created_by),
+        INDEX idx_project_payments_deleted_at (deleted_at),
         CONSTRAINT fk_project_payments_project
           FOREIGN KEY (project_id) REFERENCES projects(id)
           ON DELETE CASCADE,
@@ -65,6 +67,9 @@ function ensure_project_payments_table(PDO $pdo): bool {
     }
     if (!db_has_column($pdo, 'project_payments', 'created_at')) {
       $pdo->exec("ALTER TABLE project_payments ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP AFTER created_by");
+    }
+    if (!db_has_column($pdo, 'project_payments', 'deleted_at')) {
+      $pdo->exec("ALTER TABLE project_payments ADD COLUMN deleted_at DATETIME NULL AFTER created_at");
     }
 
     $pdo->exec(
@@ -93,6 +98,11 @@ function ensure_project_payments_table(PDO $pdo): bool {
     }
     try {
       $pdo->exec("ALTER TABLE project_payments ADD INDEX idx_project_payments_created_by (created_by)");
+    } catch (Throwable $e) {
+      // Index may already exist.
+    }
+    try {
+      $pdo->exec("ALTER TABLE project_payments ADD INDEX idx_project_payments_deleted_at (deleted_at)");
     } catch (Throwable $e) {
       // Index may already exist.
     }

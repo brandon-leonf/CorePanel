@@ -86,6 +86,7 @@ try {
     ? "LEFT JOIN (
            SELECT project_id, tenant_id, SUM(amount) AS paid_amount
            FROM project_payments
+           WHERE deleted_at IS NULL
            GROUP BY project_id, tenant_id
          ) payment_totals
            ON payment_totals.project_id = p.id
@@ -101,7 +102,7 @@ try {
            COALESCE(task_totals.total_amount, 0.00) AS project_total_amount,
            {$paymentSelect}
     FROM projects p
-    JOIN users u ON u.id = p.user_id
+    JOIN users u ON u.id = p.user_id AND u.deleted_at IS NULL
     LEFT JOIN (
       SELECT project_id, tenant_id, SUM(amount) AS total_amount
       FROM project_tasks
@@ -110,7 +111,9 @@ try {
       ON task_totals.project_id = p.id
      AND task_totals.tenant_id = p.tenant_id
     {$paymentJoin}
-    WHERE p.status IN ({$statusPlaceholders}) AND p.tenant_id = ?
+    WHERE p.status IN ({$statusPlaceholders})
+      AND p.tenant_id = ?
+      AND p.deleted_at IS NULL
     ORDER BY p.id DESC
   ");
   $stmt->execute(array_merge($dashboardStatuses, [$tenantId]));
@@ -354,6 +357,7 @@ render_header('Admin Dashboard • CorePanel');
                   $callHref = project_phone_call_href($clientPhone);
                   $canAccessProject = $canViewProjectsAny || ($canViewProjectsOwn && (int)$p['user_id'] === $actorId);
                   $canEditProject = user_has_permission($me, 'projects.edit.any') || (user_has_permission($me, 'projects.edit.own') && (int)$p['user_id'] === $actorId);
+                  $canDeleteProject = user_has_permission($me, 'projects.delete.any') || (user_has_permission($me, 'projects.delete.own') && (int)$p['user_id'] === $actorId);
                   $paymentSnapshot = $p['_payment_snapshot'] ?? project_payment_snapshot(
                     (float)($p['project_total_amount'] ?? 0.0),
                     (float)($p['paid_amount'] ?? 0.0)
@@ -393,7 +397,7 @@ render_header('Admin Dashboard • CorePanel');
                       <?php if ($callHref !== null): ?>
                         <a class="admin-project-action-link" href="<?= e_url_attr($callHref) ?>">Call</a>
                       <?php endif; ?>
-                      <?php if ($canEditProject): ?>
+                      <?php if ($canDeleteProject): ?>
                         <form method="post" action="/admin/projects/delete.php" class="admin-project-inline-form">
                           <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
                           <input type="hidden" name="id" value="<?= (int)$p['id'] ?>">
@@ -401,7 +405,7 @@ render_header('Admin Dashboard • CorePanel');
                           <button
                             class="admin-project-action-link admin-project-action-button admin-project-action-delete"
                             type="submit"
-                            data-confirm="Delete this project? This will remove its tasks, media, and payments."
+                            data-confirm="Delete this project? You can restore it later."
                             aria-label="Delete project"
                             title="Delete project"
                           >

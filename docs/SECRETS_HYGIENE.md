@@ -27,11 +27,29 @@ Never commit real runtime secrets. Use ignored local files:
 - `config/db.local.php`
 - `config/security.env`
 - `.env` / `.env.*`
+- encryption key files (`*.pem`, `*.key`, `*.p12`, `*.pfx`, `*.jks`, `*.keystore`)
+
+Explicitly never store in GitHub:
+
+- `.env` and encryption keys
+- DB passwords
+- SMTP passwords
+- CAPTCHA secrets
 
 Commit only templates/examples:
 
 - `config/db.local.example.php`
 - `config/security.env.example`
+
+Commit hook now blocks staged changes that include:
+
+- Forbidden files: `.env`, `.env.*` (except `.env.example`/`.env.sample`/`.env.template`), `config/security.env`, `config/db.local.php`
+- Key-material filename patterns above
+- Non-placeholder assignments for:
+  - `COREPANEL_FIELD_KEY`, `COREPANEL_ENCRYPTION_KEY`
+  - `COREPANEL_DB_PASSWORD`, `DB_PASSWORD`, `MYSQL_PASSWORD`, `MYSQL_ROOT_PASSWORD`, `MARIADB_ROOT_PASSWORD`
+  - `SMTP_PASSWORD`, `SMTP_PASS`, `MAIL_PASSWORD`
+  - `RECAPTCHA_SECRET`, `CAPTCHA_SECRET`, `HCAPTCHA_SECRET`
 
 ## History Scanning
 

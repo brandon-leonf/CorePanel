@@ -17,7 +17,9 @@ $userId = (int)$me['id'];
 $stmt = $pdo->prepare("
   SELECT id, project_no, title, status, created_at
   FROM projects
-  WHERE user_id = ? AND tenant_id = ?
+  WHERE user_id = ?
+    AND tenant_id = ?
+    AND deleted_at IS NULL
   ORDER BY id DESC
 ");
 $stmt->execute([$userId, $tenantId]);

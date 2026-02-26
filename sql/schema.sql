@@ -17,8 +17,10 @@ CREATE TABLE IF NOT EXISTS users (
   twofa_enabled_at DATETIME NULL,
   role ENUM('user','admin') NOT NULL DEFAULT 'user',
   tenant_id INT UNSIGNED NOT NULL DEFAULT 1,
+  deleted_at DATETIME NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   INDEX idx_users_tenant_id (tenant_id),
+  INDEX idx_users_deleted_at (deleted_at),
   CONSTRAINT fk_users_tenant
     FOREIGN KEY (tenant_id) REFERENCES tenants(id)
     ON DELETE RESTRICT

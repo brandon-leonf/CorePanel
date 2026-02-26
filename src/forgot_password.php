@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 $pdo = require __DIR__ . '/../config/db.php';
 require __DIR__ . '/../src/helpers.php';
+require __DIR__ . '/../src/auth.php';
 require __DIR__ . '/../src/layout.php';
 require __DIR__ . '/../src/password_reset.php';
 require __DIR__ . '/../src/validation.php';
@@ -12,6 +13,7 @@ $message = '';
 $debugLink = null;
 $captchaRequired = false;
 $captchaQuestion = '';
+ensure_access_control_schema($pdo);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   if (!csrf_verify((string)($_POST['csrf_token'] ?? ''))) {
@@ -45,7 +47,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
   $requestIssued = false;
   if (!$rateState['blocked'] && $captchaPassed && $email !== '' && strlen($email) <= 190 && filter_var($email, FILTER_VALIDATE_EMAIL)) {
-    $stmt = $pdo->prepare("SELECT id FROM users WHERE email = ? LIMIT 1");
+    $stmt = $pdo->prepare("SELECT id FROM users WHERE email = ? AND deleted_at IS NULL LIMIT 1");
     $stmt->execute([$email]);
     $u = $stmt->fetch();
 

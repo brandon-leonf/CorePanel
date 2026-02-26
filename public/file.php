@@ -37,7 +37,13 @@ $canViewTenantFiles = user_has_permission($me, 'projects.view.any') || user_has_
 $authorized = false;
 
 if ($canViewTenantFiles) {
-  $itemSql = 'SELECT id FROM items WHERE tenant_id = ? AND (image_path = ? OR image_path = ? OR image_path = ? OR image_path = ?) LIMIT 1';
+  $itemSql = 'SELECT i.id
+    FROM items i
+    JOIN users u ON u.id = i.user_id
+    WHERE i.tenant_id = ?
+      AND u.deleted_at IS NULL
+      AND (i.image_path = ? OR i.image_path = ? OR i.image_path = ? OR i.image_path = ?)
+    LIMIT 1';
   $stmt = $pdo->prepare(
     $itemSql
   );
@@ -51,6 +57,8 @@ if ($canViewTenantFiles) {
         JOIN projects p ON p.id = pi.project_id
         WHERE pi.tenant_id = ?
           AND p.tenant_id = ?
+          AND p.deleted_at IS NULL
+          AND pi.deleted_at IS NULL
           AND (pi.image_path = ? OR pi.image_path = ? OR pi.image_path = ? OR pi.image_path = ?)
         LIMIT 1';
       $stmt = $pdo->prepare(
@@ -63,11 +71,13 @@ if ($canViewTenantFiles) {
     }
   }
 } else {
-  $itemSql = 'SELECT id
-    FROM items
-    WHERE user_id = ?
-      AND tenant_id = ?
-      AND (image_path = ? OR image_path = ? OR image_path = ? OR image_path = ?)
+  $itemSql = 'SELECT i.id
+    FROM items i
+    JOIN users u ON u.id = i.user_id
+    WHERE i.user_id = ?
+      AND i.tenant_id = ?
+      AND u.deleted_at IS NULL
+      AND (i.image_path = ? OR i.image_path = ? OR i.image_path = ? OR i.image_path = ?)
     LIMIT 1';
   $stmt = $pdo->prepare(
     $itemSql
@@ -83,6 +93,8 @@ if ($canViewTenantFiles) {
         WHERE pi.tenant_id = ?
           AND p.user_id = ?
           AND p.tenant_id = ?
+          AND p.deleted_at IS NULL
+          AND pi.deleted_at IS NULL
           AND (pi.image_path = ? OR pi.image_path = ? OR pi.image_path = ? OR pi.image_path = ?)
         LIMIT 1';
       $stmt = $pdo->prepare(

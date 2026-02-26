@@ -31,9 +31,11 @@ function pr_find_valid_reset(PDO $pdo, string $token): ?array {
   $stmt = $pdo->prepare(
     "SELECT pr.id, pr.user_id, pr.expires_at, pr.used_at
      FROM password_resets pr
+     JOIN users u ON u.id = pr.user_id
      WHERE pr.token_hash = ?
        AND pr.used_at IS NULL
        AND pr.expires_at > NOW()
+       AND u.deleted_at IS NULL
      LIMIT 1"
   );
   $stmt->execute([$tokenHash]);
@@ -57,11 +59,13 @@ function pr_redeem_and_update_password(PDO $pdo, string $token, string $password
     }
 
     $stmt = $pdo->prepare(
-      "SELECT id, user_id
-       FROM password_resets
-       WHERE token_hash = ?
-         AND used_at IS NULL
-         AND expires_at > NOW()
+      "SELECT pr.id, pr.user_id
+       FROM password_resets pr
+       JOIN users u ON u.id = pr.user_id
+       WHERE pr.token_hash = ?
+         AND pr.used_at IS NULL
+         AND pr.expires_at > NOW()
+         AND u.deleted_at IS NULL
        LIMIT 1
        FOR UPDATE"
     );
@@ -75,7 +79,7 @@ function pr_redeem_and_update_password(PDO $pdo, string $token, string $password
       return false;
     }
 
-    $updUser = $pdo->prepare("UPDATE users SET password_hash = ? WHERE id = ?");
+    $updUser = $pdo->prepare("UPDATE users SET password_hash = ? WHERE id = ? AND deleted_at IS NULL");
     $updUser->execute([$passwordHash, (int)$reset['user_id']]);
 
     $consume = $pdo->prepare("UPDATE password_resets SET used_at = NOW() WHERE id = ? AND used_at IS NULL");

@@ -22,7 +22,9 @@ $tenantId = actor_tenant_id($me);
 $usersStmt = $pdo->prepare(
   "SELECT id, name, email
    FROM users
-   WHERE role = ? AND tenant_id = ?
+   WHERE role = ?
+     AND tenant_id = ?
+     AND deleted_at IS NULL
    ORDER BY name ASC"
 );
 $usersStmt->execute(['user', $tenantId]);
@@ -56,7 +58,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $clientCheckStmt = $pdo->prepare(
       "SELECT id
        FROM users
-       WHERE id = ? AND tenant_id = ? AND role = 'user'
+       WHERE id = ?
+         AND tenant_id = ?
+         AND role = 'user'
+         AND deleted_at IS NULL
        LIMIT 1"
     );
     $clientCheckStmt->execute([$userId, $tenantId]);

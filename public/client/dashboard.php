@@ -31,6 +31,7 @@ try {
     ? "LEFT JOIN (
          SELECT project_id, tenant_id, SUM(amount) AS paid_amount
          FROM project_payments
+         WHERE deleted_at IS NULL
          GROUP BY project_id, tenant_id
        ) payment_totals
          ON payment_totals.project_id = p.id
@@ -49,7 +50,9 @@ try {
       ON task_totals.project_id = p.id
      AND task_totals.tenant_id = p.tenant_id
     {$paymentJoin}
-    WHERE p.user_id = ? AND p.tenant_id = ?
+    WHERE p.user_id = ?
+      AND p.tenant_id = ?
+      AND p.deleted_at IS NULL
     ORDER BY p.id DESC
   ");
   $stmt->execute([$userId, $tenantId]);

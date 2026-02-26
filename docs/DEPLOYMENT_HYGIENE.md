@@ -97,3 +97,31 @@
 - Verify strict filesystem permissions:
   - `./scripts/security/check_permissions.sh`
   - optional auto-remediation: `./scripts/security/check_permissions.sh --fix`
+
+## 10) Staging deployment + smoke gate
+
+- Use staged artifact sync with built-in excludes for local secrets/uploads:
+  - `./scripts/security/deploy_staging.sh --target deploy@staging-host:/var/www/corepanel --base-url https://staging.example.com`
+- Script behavior:
+  - rsync deploy (`--delete`) excluding `.env`, `config/*.local`, `storage/uploads`, logs, and backups
+  - optional smoke gate after deploy (fails deployment if smoke fails)
+- Smoke suite script:
+  - `./scripts/security/run_staging_smoke_tests.sh https://staging.example.com`
+  - checks baseline reachability, web exposure, optional HTTPS edge checks, optional protected `/health` and `/health/db`, and security regression suite.
+
+Recommended CI/CD gate:
+1. deploy to staging with `deploy_staging.sh`
+2. run smoke tests with health token
+3. promote only if all checks pass
+
+## 11) Versioned release + rollback gate
+
+- Deploy production/staging using versioned release directories and atomic symlink switch:
+  - `./scripts/security/deploy_versioned_release.sh --target deploy@host:/var/www/corepanel --version vYYYY.MM.DD.N --base-url https://app.example.com`
+- Keep document root pointed at `current/public` (not directly at `releases/<version>/public`).
+- Keep rollback path ready:
+  - `./scripts/security/rollback_versioned_release.sh --target deploy@host:/var/www/corepanel --base-url https://app.example.com`
+- Optionally build and archive immutable release bundles:
+  - `./scripts/security/package_release.sh --version vYYYY.MM.DD.N`
+- Full runbook:
+  - [docs/RELEASES.md](/Users/brandon/Desktop/Projects/COREPANEL/docs/RELEASES.md)

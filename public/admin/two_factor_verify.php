@@ -9,6 +9,7 @@ require __DIR__ . '/../../src/security.php';
 require __DIR__ . '/../../src/totp.php';
 
 start_session();
+send_private_no_store_headers();
 if (!is_session_bound_to_current_client()) {
   destroy_current_session();
   redirect('/login.php');
@@ -34,6 +35,7 @@ $stmt = $pdo->prepare(
   "SELECT id, name, email, role, totp_secret, twofa_enabled_at
    FROM users
    WHERE id = ?
+     AND deleted_at IS NULL
    LIMIT 1"
 );
 $stmt->execute([$pendingUserId]);

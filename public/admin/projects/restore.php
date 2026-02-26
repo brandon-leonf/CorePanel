@@ -31,13 +31,13 @@ if ($returnToRaw !== '' && str_starts_with($returnToRaw, '/admin/') && !str_cont
   $returnTo = $returnToRaw;
 }
 
-$projectScope = require_project_access($pdo, $me, $projectId, 'delete');
-$projectUserId = (int)($projectScope['user_id'] ?? 0);
-
 $projectStmt = $pdo->prepare(
-  "SELECT id, user_id, project_no, title
-   FROM projects
-   WHERE id = ? AND tenant_id = ? AND deleted_at IS NULL
+  "SELECT p.id, p.user_id, p.project_no, p.title, u.deleted_at AS client_deleted_at
+   FROM projects p
+   LEFT JOIN users u ON u.id = p.user_id
+   WHERE p.id = ?
+     AND p.tenant_id = ?
+     AND p.deleted_at IS NOT NULL
    LIMIT 1"
 );
 $projectStmt->execute([$projectId, $tenantId]);
@@ -46,56 +46,65 @@ if (!$project) {
   http_response_code(404);
   exit('Project not found');
 }
+if (trim((string)($project['client_deleted_at'] ?? '')) !== '') {
+  http_response_code(400);
+  exit('Restore the client account before restoring this project.');
+}
+
+$canRestoreAny = user_has_permission($me, 'projects.delete.any');
+$canRestoreOwn = user_has_permission($me, 'projects.delete.own') && (int)$project['user_id'] === (int)$me['id'];
+if (!$canRestoreAny && !$canRestoreOwn) {
+  http_response_code(403);
+  exit('Forbidden');
+}
 
 $pdo->beginTransaction();
 try {
   if (security_table_exists($pdo, 'project_payments')) {
-    $softDeletePayments = $pdo->prepare(
+    $restorePayments = $pdo->prepare(
       "UPDATE project_payments
-       SET deleted_at = NOW()
+       SET deleted_at = NULL
        WHERE project_id = ?
          AND tenant_id = ?
-         AND deleted_at IS NULL"
+         AND deleted_at IS NOT NULL"
     );
-    $softDeletePayments->execute([$projectId, $tenantId]);
+    $restorePayments->execute([$projectId, $tenantId]);
   }
 
   if (security_table_exists($pdo, 'project_images')) {
-    $softDeleteImages = $pdo->prepare(
+    $restoreFiles = $pdo->prepare(
       "UPDATE project_images
-       SET deleted_at = NOW()
+       SET deleted_at = NULL
        WHERE project_id = ?
          AND tenant_id = ?
-         AND deleted_at IS NULL"
+         AND deleted_at IS NOT NULL"
     );
-    $softDeleteImages->execute([$projectId, $tenantId]);
+    $restoreFiles->execute([$projectId, $tenantId]);
   }
 
-  $softDeleteProject = $pdo->prepare(
+  $restoreProject = $pdo->prepare(
     "UPDATE projects
-     SET deleted_at = NOW()
+     SET deleted_at = NULL
      WHERE id = ?
        AND tenant_id = ?
-       AND deleted_at IS NULL"
+       AND deleted_at IS NOT NULL"
   );
-  $softDeleteProject->execute([$projectId, $tenantId]);
+  $restoreProject->execute([$projectId, $tenantId]);
 
-  if ($me) {
-    $projectNo = trim((string)($project['project_no'] ?? ''));
-    $projectTitle = trim((string)($project['title'] ?? ''));
-    $summary = 'Soft deleted project';
-    if ($projectNo !== '' || $projectTitle !== '') {
-      $summary .= ' ' . trim($projectNo . ' ' . $projectTitle);
-    }
-    admin_audit_log(
-      $pdo,
-      (int)$me['id'],
-      'delete_project',
-      $projectUserId > 0 ? $projectUserId : null,
-      $summary,
-      $tenantId
-    );
+  $projectNo = trim((string)($project['project_no'] ?? ''));
+  $projectTitle = trim((string)($project['title'] ?? ''));
+  $summary = 'Restored project';
+  if ($projectNo !== '' || $projectTitle !== '') {
+    $summary .= ' ' . trim($projectNo . ' ' . $projectTitle);
   }
+  admin_audit_log(
+    $pdo,
+    (int)$me['id'],
+    'restore_project',
+    (int)$project['user_id'],
+    $summary,
+    $tenantId
+  );
 
   $pdo->commit();
 } catch (Throwable $e) {

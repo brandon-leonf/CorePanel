@@ -25,7 +25,7 @@ $user = require_user_in_tenant($pdo, $me, $id);
 $stmt = $pdo->prepare(
   "SELECT id, name, email, role, phone, address, notes, tenant_id
    FROM users
-   WHERE id = ? AND tenant_id = ?
+   WHERE id = ? AND tenant_id = ? AND deleted_at IS NULL
    LIMIT 1"
 );
 $stmt->execute([$id, $tenantId]);
@@ -197,7 +197,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       $up = $pdo->prepare("
         UPDATE users
         SET name = ?, email = ?, phone = ?, address = ?, notes = ?
-        WHERE id = ? AND tenant_id = ?
+        WHERE id = ? AND tenant_id = ? AND deleted_at IS NULL
       ");
       $up->execute([
         $name,
@@ -218,7 +218,7 @@ try {
   $pstmt = $pdo->prepare("
     SELECT id, project_no, title, status, created_at
     FROM projects
-    WHERE user_id = ? AND tenant_id = ?
+    WHERE user_id = ? AND tenant_id = ? AND deleted_at IS NULL
     ORDER BY id DESC
   ");
   $pstmt->execute([$id, $tenantId]);

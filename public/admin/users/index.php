@@ -14,6 +14,7 @@ $canCreateUser = user_has_permission($me, 'users.create');
 $canEditUser = user_has_permission($me, 'users.edit');
 $canManageRoles = user_has_permission($me, 'users.role.manage');
 $canDeleteUser = user_has_permission($me, 'users.delete');
+$deletedClients = [];
 $roleErrorCode = (string)($_GET['role_error'] ?? '');
 $roleErrorMessage = match ($roleErrorCode) {
   'confirm_phrase' => 'Promotion blocked: type the exact confirmation phrase "MAKE ADMIN" to continue.',
@@ -38,6 +39,7 @@ $stmt = $pdo->prepare(
   "SELECT id, name, email, role, created_at
    FROM users
    WHERE tenant_id = ?
+     AND deleted_at IS NULL
    ORDER BY CASE WHEN LOWER(role) = 'admin' THEN 0 ELSE 1 END, created_at DESC"
 );
 $stmt->execute([$tenantId]);
@@ -51,6 +53,16 @@ foreach ($users as $userRow) {
     $clientCount++;
   }
 }
+$deletedClientsStmt = $pdo->prepare(
+  "SELECT id, name, email, role, created_at, deleted_at
+   FROM users
+   WHERE tenant_id = ?
+     AND role = 'user'
+     AND deleted_at IS NOT NULL
+   ORDER BY deleted_at DESC, id DESC"
+);
+$deletedClientsStmt->execute([$tenantId]);
+$deletedClients = $deletedClientsStmt->fetchAll() ?: [];
 $auditRows = admin_audit_recent($pdo, 30, $tenantId);
 
 render_header('Manage Users • CorePanel');
@@ -153,18 +165,18 @@ render_header('Manage Users • CorePanel');
                     <?php endif; ?>
                   <?php endif; ?>
 
-                  <?php if ($canManageRoles && $canDeleteUser): ?>
+                  <?php if ($canManageRoles && $canDeleteUser && !$isAdminRow): ?>
                     <span class="admin-action-sep">|</span>
                   <?php endif; ?>
 
-                  <?php if ($canDeleteUser): ?>
+                  <?php if ($canDeleteUser && !$isAdminRow): ?>
                     <form method="post" action="/admin/users/delete.php" class="admin-inline-form">
                       <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
                       <input type="hidden" name="id" value="<?= (int)$u['id'] ?>">
                       <button
                         class="admin-action-link admin-action-delete"
                         type="submit"
-                        data-confirm="Delete this user? This will also delete their items."
+                        data-confirm="Delete this user? You can restore them later."
                         aria-label="Delete user"
                       >
                         <i class="bi bi-trash3" aria-hidden="true"></i>
@@ -182,6 +194,45 @@ render_header('Manage Users • CorePanel');
       </tbody>
     </table>
   </div>
+
+  <section class="admin-users-table-wrap" aria-labelledby="deleted-clients-title">
+    <h2 id="deleted-clients-title">Deleted Clients</h2>
+    <?php if (!$deletedClients): ?>
+      <p>No deleted clients.</p>
+    <?php else: ?>
+      <table class="admin-users-table" border="1" cellpadding="8" cellspacing="0">
+        <thead>
+          <tr><th>Name</th><th>Email</th><th>Deleted</th><th>Actions</th></tr>
+        </thead>
+        <tbody>
+          <?php foreach ($deletedClients as $deletedUser): ?>
+            <tr>
+              <td><?= e((string)$deletedUser['name']) ?></td>
+              <td><?= e((string)$deletedUser['email']) ?></td>
+              <td><?= e((string)$deletedUser['deleted_at']) ?></td>
+              <td>
+                <?php if ($canDeleteUser): ?>
+                  <form method="post" action="/admin/users/restore.php" class="admin-inline-form">
+                    <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
+                    <input type="hidden" name="id" value="<?= (int)$deletedUser['id'] ?>">
+                    <button
+                      class="admin-action-link admin-action-edit"
+                      type="submit"
+                      data-confirm="Restore this client and related project records?"
+                    >
+                      Restore
+                    </button>
+                  </form>
+                <?php else: ?>
+                  <span class="status-text">No permission</span>
+                <?php endif; ?>
+              </td>
+            </tr>
+          <?php endforeach; ?>
+        </tbody>
+      </table>
+    <?php endif; ?>
+  </section>
 
   <?php if ($canManageRoles): ?>
     <div class="admin-promote-modal" data-promote-modal hidden>
