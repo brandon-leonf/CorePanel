@@ -12,6 +12,7 @@ require __DIR__ . '/../../../src/security.php';
 $me = require_permission($pdo, 'projects.create');
 $projectNotesEnabled = ensure_project_notes_column($pdo);
 $projectAddressEnabled = ensure_project_address_column($pdo);
+$projectDueDateEnabled = ensure_project_due_date_column($pdo);
 security_prepare_sensitive_storage($pdo);
 $projectStatuses = project_statuses($pdo);
 
@@ -33,6 +34,7 @@ $title = normalize_single_line((string)($_POST['title'] ?? ''));
 $description = normalize_multiline((string)($_POST['description'] ?? ''));
 $notes = normalize_multiline((string)($_POST['notes'] ?? ''));
 $projectAddress = normalize_multiline((string)($_POST['project_address'] ?? ''));
+$dueDateInput = trim((string)($_POST['due_date'] ?? ''));
 $status = (string)($_POST['status'] ?? 'active');
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -46,6 +48,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $description = normalize_multiline((string)($_POST['description'] ?? ''));
   $notes = normalize_multiline((string)($_POST['notes'] ?? ''));
   $projectAddress = normalize_multiline((string)($_POST['project_address'] ?? ''));
+  $dueDateInput = trim((string)($_POST['due_date'] ?? ''));
   $status = (string)($_POST['status'] ?? 'active');
 
   if ($userId <= 0) $errors[] = 'Client is required.';
@@ -69,13 +72,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   if ($projectAddressEnabled) {
     validate_optional_text($projectAddress, 'Project address', 2000, $errors);
   }
+  $dueDateValue = null;
+  if ($projectDueDateEnabled && $dueDateInput !== '') {
+    $dueDate = DateTimeImmutable::createFromFormat('Y-m-d', $dueDateInput);
+    $dueErrors = DateTimeImmutable::getLastErrors();
+    $dueWarnings = is_array($dueErrors) ? (int)($dueErrors['warning_count'] ?? 0) : 0;
+    $dueErrorCount = is_array($dueErrors) ? (int)($dueErrors['error_count'] ?? 0) : 0;
+    if (
+      !($dueDate instanceof DateTimeImmutable) ||
+      $dueWarnings > 0 ||
+      $dueErrorCount > 0
+    ) {
+      $errors[] = 'Due date must be a valid date.';
+    } else {
+      $dueDateValue = $dueDate->format('Y-m-d');
+    }
+  }
   if (!in_array($status, $projectStatuses, true)) $errors[] = 'Invalid status.';
 
   if (!$errors) {
     $projectNo = next_project_no($pdo);
     $notesStored = security_store_project_notes($notes === '' ? null : $notes);
     $projectAddressStored = security_store_project_address($projectAddress === '' ? null : $projectAddress);
-    if ($projectNotesEnabled && $projectAddressEnabled) {
+    if ($projectNotesEnabled && $projectAddressEnabled && $projectDueDateEnabled) {
+      $ins = $pdo->prepare(
+        "INSERT INTO projects
+          (project_no, user_id, tenant_id, title, description, notes, project_address, due_date, status, created_by)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+      );
+      $ins->execute([
+        $projectNo,
+        $userId,
+        $tenantId,
+        $title,
+        $description === '' ? null : $description,
+        $notesStored,
+        $projectAddressStored,
+        $dueDateValue,
+        $status,
+        $adminId,
+      ]);
+    } elseif ($projectNotesEnabled && $projectAddressEnabled) {
       $ins = $pdo->prepare(
         "INSERT INTO projects
           (project_no, user_id, tenant_id, title, description, notes, project_address, status, created_by)
@@ -89,6 +126,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $description === '' ? null : $description,
         $notesStored,
         $projectAddressStored,
+        $status,
+        $adminId,
+      ]);
+    } elseif ($projectNotesEnabled && $projectDueDateEnabled) {
+      $ins = $pdo->prepare(
+        "INSERT INTO projects
+          (project_no, user_id, tenant_id, title, description, notes, due_date, status, created_by)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+      );
+      $ins->execute([
+        $projectNo,
+        $userId,
+        $tenantId,
+        $title,
+        $description === '' ? null : $description,
+        $notesStored,
+        $dueDateValue,
         $status,
         $adminId,
       ]);
@@ -108,6 +162,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $status,
         $adminId,
       ]);
+    } elseif ($projectAddressEnabled && $projectDueDateEnabled) {
+      $ins = $pdo->prepare(
+        "INSERT INTO projects
+          (project_no, user_id, tenant_id, title, description, project_address, due_date, status, created_by)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+      );
+      $ins->execute([
+        $projectNo,
+        $userId,
+        $tenantId,
+        $title,
+        $description === '' ? null : $description,
+        $projectAddressStored,
+        $dueDateValue,
+        $status,
+        $adminId,
+      ]);
     } elseif ($projectAddressEnabled) {
       $ins = $pdo->prepare(
         "INSERT INTO projects
@@ -121,6 +192,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $title,
         $description === '' ? null : $description,
         $projectAddressStored,
+        $status,
+        $adminId,
+      ]);
+    } elseif ($projectDueDateEnabled) {
+      $ins = $pdo->prepare(
+        "INSERT INTO projects
+          (project_no, user_id, tenant_id, title, description, due_date, status, created_by)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+      );
+      $ins->execute([
+        $projectNo,
+        $userId,
+        $tenantId,
+        $title,
+        $description === '' ? null : $description,
+        $dueDateValue,
         $status,
         $adminId,
       ]);
@@ -191,6 +278,13 @@ render_header('New Project • Admin • CorePanel');
     <?php if ($projectAddressEnabled): ?>
       <label>Project Address<br>
         <textarea name="project_address" rows="3"><?= e($projectAddress) ?></textarea>
+      </label>
+      <br><br>
+    <?php endif; ?>
+
+    <?php if ($projectDueDateEnabled): ?>
+      <label>Due Date<br>
+        <input type="date" name="due_date" value="<?= e($dueDateInput) ?>">
       </label>
       <br><br>
     <?php endif; ?>

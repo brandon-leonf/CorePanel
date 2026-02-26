@@ -5,6 +5,12 @@ $pdo = require __DIR__ . '/../../../config/db.php';
 require __DIR__ . '/../../../src/auth.php';
 require __DIR__ . '/../../../src/helpers.php';
 require __DIR__ . '/../../../src/admin_audit.php';
+require __DIR__ . '/../../../src/security.php';
+require __DIR__ . '/../../../src/totp.php';
+
+function redirect_role_error(string $code): never {
+  redirect('/admin/users/index.php?role_error=' . rawurlencode($code));
+}
 
 $me = require_permission($pdo, 'users.role.manage');
 $tenantId = actor_tenant_id($me);
@@ -45,6 +51,61 @@ if ($currentRoleDb === 'admin') {
   }
   $newRole = 'user';
 } else {
+  $actorStmt = $pdo->prepare(
+    "SELECT id, role, password_hash, totp_secret, twofa_enabled_at
+     FROM users
+     WHERE id = ? AND tenant_id = ?
+     LIMIT 1"
+  );
+  $actorStmt->execute([(int)$me['id'], $tenantId]);
+  $actor = $actorStmt->fetch();
+  if (!$actor || (string)($actor['role'] ?? 'user') !== 'admin') {
+    redirect_role_error('reauth_unavailable');
+  }
+
+  $confirmPassword = (string)($_POST['confirm_password'] ?? '');
+  $confirmPhrase = strtoupper(trim((string)($_POST['confirm_phrase'] ?? '')));
+  if ($confirmPhrase !== 'MAKE ADMIN') {
+    admin_audit_log(
+      $pdo,
+      (int)$me['id'],
+      'promote_user_reauth_failed',
+      $id,
+      'Failed confirmation phrase before admin promotion',
+      $tenantId
+    );
+    redirect_role_error('confirm_phrase');
+  }
+
+  if ($confirmPassword === '' || !password_verify($confirmPassword, (string)$actor['password_hash'])) {
+    admin_audit_log(
+      $pdo,
+      (int)$me['id'],
+      'promote_user_reauth_failed',
+      $id,
+      'Failed password re-authentication before admin promotion',
+      $tenantId
+    );
+    redirect_role_error('reauth_failed');
+  }
+
+  $requiresTwofa = ensure_user_twofa_columns($pdo) && admin_twofa_enabled($actor);
+  if ($requiresTwofa) {
+    $totpSecret = totp_secret_resolve((string)($actor['totp_secret'] ?? ''));
+    $confirmTotp = preg_replace('/\D+/', '', (string)($_POST['confirm_totp'] ?? '')) ?? '';
+    if ($totpSecret === null || $confirmTotp === '' || !totp_verify_code($totpSecret, $confirmTotp, 1, 30, 6)) {
+      admin_audit_log(
+        $pdo,
+        (int)$me['id'],
+        'promote_user_reauth_failed',
+        $id,
+        'Failed 2FA re-authentication before admin promotion',
+        $tenantId
+      );
+      redirect_role_error('reauth_failed');
+    }
+  }
+
   $newRole = 'admin';
 }
 

@@ -8,7 +8,7 @@ require __DIR__ . '/../../src/layout.php';
 require __DIR__ . '/../../src/security.php';
 require __DIR__ . '/../../src/totp.php';
 require __DIR__ . '/../../src/admin_audit.php';
-require __DIR__ . '/../../src/rate_limit.php';
+require_once __DIR__ . '/../../src/rate_limit.php';
 
 $me = require_permission($pdo, 'security.manage');
 start_session();
@@ -163,87 +163,105 @@ $recentAlerts = $alertsStmt->fetchAll() ?: [];
 
 render_header('Admin Security • CorePanel');
 ?>
-<div class="container">
+<div class="container container-wide admin-security-page">
   <h1>Admin Security</h1>
   <p><a href="/admin/dashboard.php">← Back to Dashboard</a></p>
 
   <?php if ($errors): ?>
-    <ul><?php foreach ($errors as $err): ?><li><?= e($err) ?></li><?php endforeach; ?></ul>
+    <div class="admin-security-alert admin-security-alert-error">
+      <?php foreach ($errors as $err): ?>
+        <p><?= e($err) ?></p>
+      <?php endforeach; ?>
+    </div>
   <?php endif; ?>
 
   <?php if ($messages): ?>
-    <ul><?php foreach ($messages as $message): ?><li><?= e($message) ?></li><?php endforeach; ?></ul>
-  <?php endif; ?>
-
-  <h2>Two-Factor Authentication (Optional)</h2>
-  <?php if (!$sensitiveEncryptionReady): ?>
-    <p><strong>Configuration required:</strong> set <code>COREPANEL_FIELD_KEY</code> to enable encrypted 2FA storage.</p>
-  <?php endif; ?>
-
-  <?php if ($twofaEnabled): ?>
-    <p>Status: <strong>Enabled</strong></p>
-    <form method="post">
-      <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
-      <input type="hidden" name="action" value="disable_2fa">
-      <button type="submit">Disable 2FA</button>
-    </form>
-  <?php else: ?>
-    <p>Status: <strong>Disabled</strong></p>
-
-    <?php if ($enrollSecret === ''): ?>
-      <form method="post">
-        <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
-        <input type="hidden" name="action" value="begin_setup">
-        <button type="submit">Start 2FA Setup</button>
-      </form>
-    <?php else: ?>
-      <p><strong>Setup key:</strong> <code><?= e(totp_display_secret($enrollSecret)) ?></code></p>
-      <p><strong>otpauth URI:</strong> <code><?= e($otpauthUri) ?></code></p>
-      <p>Add this account in your authenticator app, then enter the current 6-digit code.</p>
-
-      <form method="post">
-        <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
-        <input type="hidden" name="action" value="confirm_setup">
-
-        <label>Authentication code<br>
-          <input name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required value="<?= e($code) ?>">
-        </label><br><br>
-
-        <button type="submit">Enable 2FA</button>
-      </form>
-    <?php endif; ?>
-  <?php endif; ?>
-
-  <h2>Recent Security Alerts</h2>
-  <?php if (!$recentAlerts): ?>
-    <p>No alerts recorded yet.</p>
-  <?php else: ?>
-    <div style="overflow-x:auto;">
-      <table>
-        <thead>
-          <tr>
-            <th>When</th>
-            <th>Level</th>
-            <th>Action</th>
-            <th>Subject</th>
-            <th>Details</th>
-            <th>IP</th>
-          </tr>
-        </thead>
-        <tbody>
-          <?php foreach ($recentAlerts as $alert): ?>
-            <tr>
-              <td><?= e((string)$alert['created_at']) ?></td>
-              <td><?= e(strtoupper((string)$alert['level'])) ?></td>
-              <td><?= e((string)$alert['action']) ?></td>
-              <td><?= e((string)($alert['subject'] ?? '')) ?></td>
-              <td><?= e((string)($alert['details'] ?? '')) ?></td>
-              <td><?= e((string)($alert['ip_address'] ?? '')) ?></td>
-            </tr>
-          <?php endforeach; ?>
-        </tbody>
-      </table>
+    <div class="admin-security-alert admin-security-alert-success">
+      <?php foreach ($messages as $message): ?>
+        <p><?= e($message) ?></p>
+      <?php endforeach; ?>
     </div>
   <?php endif; ?>
+
+  <section class="admin-security-panel" aria-labelledby="admin-security-2fa-title">
+    <h2 id="admin-security-2fa-title">Two-Factor Authentication (Optional)</h2>
+    <?php if (!$sensitiveEncryptionReady): ?>
+      <p class="admin-security-note">
+        <strong>Configuration required:</strong> set <code>COREPANEL_FIELD_KEY</code> (or keyring vars) to enable encrypted 2FA storage.
+      </p>
+    <?php else: ?>
+      <p class="admin-security-note admin-security-note-success">
+        Encryption key is configured. 2FA setup is ready.
+      </p>
+    <?php endif; ?>
+
+    <?php if ($twofaEnabled): ?>
+      <p>Status: <strong class="status-text-success">Enabled</strong></p>
+      <form method="post" class="admin-security-form-inline">
+        <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
+        <input type="hidden" name="action" value="disable_2fa">
+        <button type="submit">Disable 2FA</button>
+      </form>
+    <?php else: ?>
+      <p>Status: <strong>Disabled</strong></p>
+
+      <?php if ($enrollSecret === ''): ?>
+        <form method="post" class="admin-security-form-inline">
+          <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
+          <input type="hidden" name="action" value="begin_setup">
+          <button type="submit">Start 2FA Setup</button>
+        </form>
+      <?php else: ?>
+        <p><strong>Setup key:</strong> <code><?= e(totp_display_secret($enrollSecret)) ?></code></p>
+        <p><strong>otpauth URI:</strong> <code class="admin-security-long-code"><?= e($otpauthUri) ?></code></p>
+        <p class="admin-security-note">Add this account in your authenticator app, then enter the current 6-digit code.</p>
+
+        <form method="post" class="admin-security-confirm-form">
+          <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
+          <input type="hidden" name="action" value="confirm_setup">
+
+          <label>Authentication code<br>
+            <input name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required value="<?= e($code) ?>">
+          </label>
+
+          <button type="submit">Enable 2FA</button>
+        </form>
+      <?php endif; ?>
+    <?php endif; ?>
+  </section>
+
+  <section class="admin-security-panel" aria-labelledby="admin-security-alerts-title">
+    <h2 id="admin-security-alerts-title">Recent Security Alerts</h2>
+    <?php if (!$recentAlerts): ?>
+      <p class="admin-security-note">No alerts recorded yet.</p>
+    <?php else: ?>
+      <div class="admin-security-table-wrap">
+        <table class="admin-security-table" border="1" cellpadding="8" cellspacing="0">
+          <thead>
+            <tr>
+              <th>When</th>
+              <th>Level</th>
+              <th>Action</th>
+              <th>Subject</th>
+              <th>Details</th>
+              <th>IP</th>
+            </tr>
+          </thead>
+          <tbody>
+            <?php foreach ($recentAlerts as $alert): ?>
+              <tr>
+                <td><?= e((string)$alert['created_at']) ?></td>
+                <td><?= e(strtoupper((string)$alert['level'])) ?></td>
+                <td><?= e((string)$alert['action']) ?></td>
+                <td><?= e((string)($alert['subject'] ?? '')) ?></td>
+                <td><?= e((string)($alert['details'] ?? '')) ?></td>
+                <td><?= e((string)($alert['ip_address'] ?? '')) ?></td>
+              </tr>
+            <?php endforeach; ?>
+          </tbody>
+        </table>
+      </div>
+    <?php endif; ?>
+  </section>
 </div>
 <?php render_footer(); ?>

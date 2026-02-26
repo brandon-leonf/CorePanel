@@ -1,7 +1,86 @@
 <?php
 declare(strict_types=1);
 
+function app_parse_env_value(string $raw): string {
+  $value = trim($raw);
+  if ($value === '') {
+    return '';
+  }
+
+  $first = $value[0];
+  $last = $value[strlen($value) - 1];
+  if ($first === '"' && $last === '"' && strlen($value) >= 2) {
+    $inner = substr($value, 1, -1);
+    return stripcslashes($inner);
+  }
+  if ($first === "'" && $last === "'" && strlen($value) >= 2) {
+    return substr($value, 1, -1);
+  }
+
+  if (($commentPos = strpos($value, ' #')) !== false) {
+    $value = substr($value, 0, $commentPos);
+  }
+  return trim($value);
+}
+
+function app_load_environment(): void {
+  static $loaded = false;
+  if ($loaded) {
+    return;
+  }
+  $loaded = true;
+
+  $rootDir = dirname(__DIR__);
+  $envFiles = [
+    $rootDir . '/config/security.env',
+    $rootDir . '/.env',
+  ];
+
+  foreach ($envFiles as $filePath) {
+    if (!is_file($filePath) || !is_readable($filePath)) {
+      continue;
+    }
+
+    $lines = @file($filePath, FILE_IGNORE_NEW_LINES);
+    if (!is_array($lines)) {
+      continue;
+    }
+
+    foreach ($lines as $line) {
+      $line = trim((string)$line);
+      if ($line === '' || str_starts_with($line, '#')) {
+        continue;
+      }
+
+      if (str_starts_with($line, 'export ')) {
+        $line = trim(substr($line, 7));
+      }
+
+      if (!str_contains($line, '=')) {
+        continue;
+      }
+
+      [$name, $rawValue] = explode('=', $line, 2);
+      $name = trim($name);
+      if (!preg_match('/\A[A-Z_][A-Z0-9_]*\z/i', $name)) {
+        continue;
+      }
+
+      $existing = $_ENV[$name] ?? getenv($name);
+      if ($existing !== false && $existing !== null && trim((string)$existing) !== '') {
+        continue;
+      }
+
+      $value = app_parse_env_value((string)$rawValue);
+      $_ENV[$name] = $value;
+      putenv($name . '=' . $value);
+    }
+  }
+}
+
 function app_debug_enabled(): bool {
+  app_load_environment();
+
   $value = $_ENV['COREPANEL_DEBUG'] ?? getenv('COREPANEL_DEBUG');
   if ($value === false || $value === null) {
     $value = $_ENV['APP_DEBUG'] ?? getenv('APP_DEBUG');

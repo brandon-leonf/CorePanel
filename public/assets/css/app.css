@@ -236,7 +236,7 @@ nav a:hover {
 .admin-users-page .admin-user-actions-cell {
   text-align: left;
   vertical-align: middle;
-  white-space: nowrap;
+  white-space: normal;
 }
 
 .admin-users-page .admin-user-actions-inline {
@@ -250,6 +250,29 @@ nav a:hover {
 .admin-users-page .admin-inline-form {
   margin: 0;
   display: inline;
+}
+
+.admin-users-page .admin-role-reauth-form {
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.admin-users-page .admin-role-reauth-input {
+  width: 140px;
+  min-width: 120px;
+  height: 30px;
+  margin-top: 0;
+  padding: 0 8px;
+  border-radius: 8px;
+  font-size: 12px;
+}
+
+.admin-users-page .admin-role-reauth-input.admin-role-reauth-input-code {
+  width: 82px;
+  min-width: 74px;
 }
 
 .admin-users-page .admin-action-link {
@@ -295,6 +318,24 @@ nav a:hover {
   color: #d7e1f0;
 }
 
+.admin-users-page .admin-action-role-icon {
+  justify-content: center;
+}
+
+.admin-users-page .admin-action-role-icon .bi {
+  font-size: 1.05rem;
+}
+
+.admin-users-page .admin-action-role-user-icon,
+.admin-users-page .admin-action-role-user-icon .bi {
+  color: #ffffff;
+}
+
+.admin-users-page .admin-action-role-admin-icon,
+.admin-users-page .admin-action-role-admin-icon .bi {
+  color: #b480ff;
+}
+
 .admin-users-page .admin-action-role-promote {
   color: #b480ff;
 }
@@ -306,6 +347,80 @@ nav a:hover {
 .admin-users-page .admin-action-delete,
 .admin-users-page .admin-action-delete .bi {
   color: #ff5d6f;
+}
+
+.admin-users-page .admin-promote-modal[hidden] {
+  display: none;
+}
+
+.admin-users-page .admin-promote-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: grid;
+  place-items: center;
+  padding: 14px;
+  background: rgba(2, 6, 14, 0.7);
+  backdrop-filter: blur(2px);
+}
+
+.admin-users-page .admin-promote-modal-panel {
+  width: min(100%, 520px);
+  padding: 16px 16px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: linear-gradient(180deg, rgba(20, 24, 31, 0.96), rgba(13, 17, 24, 0.98));
+  box-shadow: 0 20px 70px rgba(0, 0, 0, 0.6);
+}
+
+.admin-users-page .admin-promote-modal-panel h2 {
+  margin: 0 0 8px;
+  text-align: left;
+  font-size: 22px;
+}
+
+.admin-users-page .admin-promote-modal-target {
+  margin: 0 0 10px;
+  color: #9fd0ff;
+}
+
+.admin-users-page .admin-promote-modal-panel > p {
+  margin: 0 0 12px;
+  text-align: left;
+}
+
+.admin-users-page .admin-promote-modal-form {
+  margin-top: 0;
+}
+
+.admin-users-page .admin-promote-modal-form label {
+  margin-bottom: 10px;
+}
+
+.admin-users-page .admin-promote-modal-form .admin-role-reauth-input {
+  width: 100%;
+  min-width: 0;
+  height: 41px;
+}
+
+.admin-users-page .admin-promote-modal-form .admin-role-reauth-input.admin-role-reauth-input-code {
+  width: 100%;
+  min-width: 0;
+}
+
+.admin-users-page .admin-promote-modal-actions {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.admin-users-page .admin-promote-modal-actions .admin-promote-modal-cancel {
+  width: auto;
+  min-width: 88px;
+  margin-top: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .container.admin-user-edit-page {
@@ -419,7 +534,8 @@ nav a:hover {
 }
 
 .admin-project-edit-page .admin-project-edit-panel,
-.admin-project-edit-page .admin-project-edit-tasks-section {
+.admin-project-edit-page .admin-project-edit-tasks-section,
+.admin-project-edit-page .admin-project-edit-payments-section {
   padding: 14px;
   border-radius: 10px;
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -427,7 +543,8 @@ nav a:hover {
 }
 
 .admin-project-edit-page .admin-project-edit-panel h2,
-.admin-project-edit-page .admin-project-edit-tasks-section h2 {
+.admin-project-edit-page .admin-project-edit-tasks-section h2,
+.admin-project-edit-page .admin-project-edit-payments-section h2 {
   margin: 0 0 10px;
   text-align: left;
   font-size: 25px;
@@ -460,6 +577,105 @@ nav a:hover {
 
 .admin-project-edit-page .admin-project-edit-tasks-section {
   margin-top: 16px;
+}
+
+.admin-project-edit-page .admin-project-edit-payments-section {
+  margin-top: 16px;
+}
+
+.admin-project-edit-page .admin-project-edit-payments-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.admin-project-edit-page .admin-project-edit-payments-stat {
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.admin-project-edit-page .admin-project-edit-payments-stat span {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.admin-project-edit-page .admin-project-edit-payments-stat strong {
+  display: block;
+  margin-top: 6px;
+  font-size: 18px;
+}
+
+.admin-project-edit-page .admin-project-edit-payments-progress-row {
+  margin-bottom: 12px;
+}
+
+.admin-project-edit-page .admin-project-edit-payment-form {
+  margin: 0 0 12px;
+}
+
+.admin-project-edit-page .admin-project-edit-payment-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 10px;
+  color: #dce8ff;
+  font-size: 13px;
+}
+
+.admin-project-edit-page .admin-project-edit-payment-checkbox input[type="checkbox"] {
+  width: auto;
+  height: auto;
+  margin: 0;
+}
+
+.admin-project-edit-page .admin-project-edit-payment-form-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.admin-project-edit-page .admin-project-edit-payments-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 4px;
+}
+
+.admin-project-edit-page .admin-project-edit-payments-table {
+  width: 100%;
+  min-width: 860px;
+  border-collapse: collapse;
+}
+
+.admin-project-edit-page .admin-project-edit-payments-table th,
+.admin-project-edit-page .admin-project-edit-payments-table td {
+  text-align: left;
+  vertical-align: top;
+}
+
+.admin-project-edit-page .admin-project-edit-payments-table th:nth-child(1),
+.admin-project-edit-page .admin-project-edit-payments-table td:nth-child(1),
+.admin-project-edit-page .admin-project-edit-payments-table th:nth-child(2),
+.admin-project-edit-page .admin-project-edit-payments-table td:nth-child(2),
+.admin-project-edit-page .admin-project-edit-payments-table th:nth-child(3),
+.admin-project-edit-page .admin-project-edit-payments-table td:nth-child(3),
+.admin-project-edit-page .admin-project-edit-payments-table th:nth-child(6),
+.admin-project-edit-page .admin-project-edit-payments-table td:nth-child(6) {
+  white-space: nowrap;
+}
+
+.admin-project-edit-page .admin-project-edit-flash-wrap {
+  margin-bottom: 10px;
+}
+
+.admin-project-edit-page .admin-project-edit-flash {
+  margin: 0 0 6px;
+  text-align: left;
 }
 
 .admin-project-edit-page .admin-project-edit-tasks-wrap {
@@ -551,6 +767,38 @@ nav a:hover {
   text-align: left;
 }
 
+.admin-project-email-page .admin-project-email-meta {
+  margin: 0 0 14px;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(11, 16, 24, 0.58);
+}
+
+.admin-project-email-page .admin-project-email-meta p {
+  margin: 0 0 8px;
+  text-align: left;
+}
+
+.admin-project-email-page .admin-project-email-meta p:last-child {
+  margin-bottom: 0;
+}
+
+.admin-project-email-page .admin-project-email-form {
+  margin-top: 0;
+}
+
+.admin-project-email-page .admin-project-email-success {
+  margin: 0 0 12px;
+  text-align: left;
+}
+
+.admin-project-email-page .admin-project-email-form textarea {
+  min-height: 420px;
+  font-family: "SFMono-Regular", Menlo, Consolas, monospace;
+  resize: vertical;
+}
+
 .admin-project-edit-page .admin-project-edit-images-section {
   margin-top: 16px;
   padding: 14px;
@@ -566,9 +814,17 @@ nav a:hover {
   line-height: 1.1;
 }
 
+.admin-project-edit-page .admin-project-edit-upload-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 12px;
+  align-items: start;
+  margin-bottom: 12px;
+}
+
 .admin-project-edit-page .admin-project-edit-images-upload-form {
-  margin: 0 0 12px;
-  max-width: 460px;
+  margin: 0;
+  max-width: none;
 }
 
 .admin-project-edit-page .admin-project-edit-images-upload-form input[type="file"] {
@@ -740,7 +996,13 @@ nav a:hover {
 .admin-projects-page .admin-projects-table th:nth-child(4),
 .admin-projects-page .admin-projects-table td:nth-child(4),
 .admin-projects-page .admin-projects-table th:nth-child(5),
-.admin-projects-page .admin-projects-table td:nth-child(5) {
+.admin-projects-page .admin-projects-table td:nth-child(5),
+.admin-projects-page .admin-projects-table th:nth-child(6),
+.admin-projects-page .admin-projects-table td:nth-child(6),
+.admin-projects-page .admin-projects-table th:nth-child(7),
+.admin-projects-page .admin-projects-table td:nth-child(7),
+.admin-projects-page .admin-projects-table th:nth-child(9),
+.admin-projects-page .admin-projects-table td:nth-child(9) {
   white-space: nowrap;
 }
 
@@ -758,6 +1020,11 @@ nav a:hover {
 
 .admin-projects-page .admin-project-action-link:hover {
   text-decoration: underline;
+}
+
+.admin-projects-page .admin-projects-table th:nth-child(8),
+.admin-projects-page .admin-projects-table td:nth-child(8) {
+  min-width: 160px;
 }
 
 .admin-projects-page .admin-project-actions-cell {
@@ -992,6 +1259,221 @@ nav a:hover {
   color: var(--muted);
 }
 
+.admin-dashboard-page .admin-ar-panel {
+  margin-top: 18px;
+  text-align: left;
+  padding: 14px 16px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(11, 16, 24, 0.72);
+}
+
+.admin-dashboard-page .admin-ar-panel h2 {
+  margin: 0 0 10px;
+  font-size: 24px;
+}
+
+.admin-dashboard-page .admin-ar-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.admin-dashboard-page .admin-ar-stat {
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.admin-dashboard-page .admin-ar-stat span {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.admin-dashboard-page .admin-ar-stat strong {
+  display: block;
+  margin-top: 6px;
+  font-size: 20px;
+}
+
+.admin-dashboard-page .admin-ar-empty {
+  margin: 8px 0 0;
+  color: var(--muted);
+}
+
+.admin-dashboard-page .admin-ar-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 4px;
+}
+
+.admin-dashboard-page .admin-ar-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 560px;
+}
+
+.admin-dashboard-page .admin-ar-table th,
+.admin-dashboard-page .admin-ar-table td {
+  text-align: left;
+  vertical-align: top;
+}
+
+.admin-dashboard-page .admin-ar-table th:nth-child(2),
+.admin-dashboard-page .admin-ar-table td:nth-child(2),
+.admin-dashboard-page .admin-ar-table th:nth-child(3),
+.admin-dashboard-page .admin-ar-table td:nth-child(3) {
+  white-space: nowrap;
+}
+
+.admin-dashboard-page .admin-active-metrics-panel {
+  margin-top: 18px;
+  text-align: left;
+  padding: 14px 16px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(11, 16, 24, 0.72);
+}
+
+.admin-dashboard-page .admin-active-metrics-panel h2 {
+  margin: 0 0 10px;
+  font-size: 24px;
+}
+
+.admin-dashboard-page .admin-active-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.admin-dashboard-page .admin-active-metric {
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.admin-dashboard-page .admin-active-metric span {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.admin-dashboard-page .admin-active-metric strong {
+  display: block;
+  margin-top: 6px;
+  font-size: 20px;
+}
+
+.container.admin-security-page {
+  --card-max-width: 1120px;
+}
+
+.admin-security-page .admin-security-panel {
+  margin-top: 16px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(11, 16, 24, 0.72);
+  text-align: left;
+}
+
+.admin-security-page .admin-security-panel h2 {
+  margin: 0 0 10px;
+  text-align: left;
+  font-size: 24px;
+  letter-spacing: -0.01em;
+}
+
+.admin-security-page .admin-security-note {
+  margin: 0 0 10px;
+  color: var(--muted);
+}
+
+.admin-security-page .admin-security-note-success {
+  color: #8ce7bc;
+}
+
+.admin-security-page .admin-security-form-inline,
+.admin-security-page .admin-security-confirm-form {
+  margin-top: 0;
+  max-width: 460px;
+}
+
+.admin-security-page .admin-security-confirm-form label {
+  margin-bottom: 10px;
+}
+
+.admin-security-page .admin-security-long-code {
+  display: inline-block;
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.admin-security-page .admin-security-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 4px;
+}
+
+.admin-security-page .admin-security-table {
+  width: 100%;
+  min-width: 860px;
+  border-collapse: collapse;
+}
+
+.admin-security-page .admin-security-table th,
+.admin-security-page .admin-security-table td {
+  text-align: left;
+  vertical-align: top;
+}
+
+.admin-security-page .admin-security-table th:nth-child(1),
+.admin-security-page .admin-security-table td:nth-child(1),
+.admin-security-page .admin-security-table th:nth-child(2),
+.admin-security-page .admin-security-table td:nth-child(2),
+.admin-security-page .admin-security-table th:nth-child(6),
+.admin-security-page .admin-security-table td:nth-child(6) {
+  white-space: nowrap;
+}
+
+.admin-security-page .admin-security-alert {
+  margin: 0 0 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  text-align: left;
+}
+
+.admin-security-page .admin-security-alert p {
+  margin: 0;
+}
+
+.admin-security-page .admin-security-alert p + p {
+  margin-top: 6px;
+}
+
+.admin-security-page .admin-security-alert-error {
+  background: rgba(255, 90, 90, 0.14);
+  border-color: rgba(255, 110, 110, 0.4);
+  color: #ffd1d1;
+}
+
+.admin-security-page .admin-security-alert-success {
+  background: rgba(57, 217, 138, 0.14);
+  border-color: rgba(93, 232, 162, 0.4);
+  color: #bff6d9;
+}
+
 .container.client-dashboard-page {
   --card-max-width: 1240px;
 }
@@ -1016,6 +1498,32 @@ nav a:hover {
   margin: 0;
   text-align: left;
   color: var(--muted);
+}
+
+.client-dashboard-page .client-dashboard-summary-cards {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0 0 10px;
+}
+
+.client-dashboard-page .client-dashboard-summary-card {
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.client-dashboard-page .client-dashboard-summary-card span {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.client-dashboard-page .client-dashboard-summary-card strong {
+  display: block;
+  margin-top: 6px;
+  font-size: 18px;
 }
 
 .container.client-projects-page {
@@ -1364,6 +1872,44 @@ li + li {
   color: #ff5d6f;
 }
 
+.payment-status-partial {
+  color: #ffcf7d;
+}
+
+.payment-status-unpaid {
+  color: #ff8f9b;
+}
+
+.payment-progress {
+  margin-top: 4px;
+  width: 100%;
+  height: 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+}
+
+.payment-progress-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #1b8eff, #39d98a);
+}
+
+.payment-progress-caption {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+}
+
+.payment-overpaid-caption {
+  display: block;
+  margin-top: 4px;
+  color: #ffcf7d;
+  font-weight: 600;
+}
+
 form {
   margin-top: 6px;
 }
@@ -1531,7 +2077,7 @@ button:active {
   }
 
   .admin-projects-page .admin-projects-table {
-    min-width: 940px;
+    min-width: 1240px;
   }
 
   .client-project-view-page .client-project-view-tasks-section h2,
@@ -1552,12 +2098,36 @@ button:active {
     font-size: 22px;
   }
 
+  .client-dashboard-page .client-dashboard-summary-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .client-projects-page .client-projects-list h2 {
     font-size: 22px;
   }
 
   .admin-dashboard-page .admin-dashboard-projects h2 {
     font-size: 22px;
+  }
+
+  .admin-security-page .admin-security-panel h2 {
+    font-size: 22px;
+  }
+
+  .admin-dashboard-page .admin-ar-panel h2 {
+    font-size: 22px;
+  }
+
+  .admin-dashboard-page .admin-ar-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-dashboard-page .admin-active-metrics-panel h2 {
+    font-size: 22px;
+  }
+
+  .admin-dashboard-page .admin-active-metrics-grid {
+    grid-template-columns: 1fr;
   }
 
   .admin-project-edit-page .admin-project-edit-grid {
@@ -1567,12 +2137,25 @@ button:active {
 
   .admin-project-edit-page .admin-project-edit-panel h2,
   .admin-project-edit-page .admin-project-edit-tasks-section h2,
+  .admin-project-edit-page .admin-project-edit-payments-section h2,
   .admin-project-edit-page .admin-project-edit-images-section h2 {
     font-size: 22px;
   }
 
   .admin-project-edit-page .admin-project-edit-tasks-table {
     min-width: 700px;
+  }
+
+  .admin-project-edit-page .admin-project-edit-payments-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-project-edit-page .admin-project-edit-payment-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-project-edit-page .admin-project-edit-payments-table {
+    min-width: 980px;
   }
 
   .admin-project-edit-page .admin-project-edit-images-grid {
@@ -1735,6 +2318,7 @@ button:active {
 
   .admin-project-edit-page .admin-project-edit-panel,
   .admin-project-edit-page .admin-project-edit-tasks-section,
+  .admin-project-edit-page .admin-project-edit-payments-section,
   .admin-project-edit-page .admin-project-edit-images-section {
     padding: 12px 10px 10px;
   }
@@ -1863,6 +2447,10 @@ button:active {
     font-size: 20px;
   }
 
+  .client-dashboard-page .client-dashboard-summary-cards {
+    grid-template-columns: 1fr;
+  }
+
   .client-projects-page .client-projects-list {
     padding: 10px 12px;
   }
@@ -1876,6 +2464,14 @@ button:active {
   }
 
   .admin-dashboard-page .admin-dashboard-projects h2 {
+    font-size: 20px;
+  }
+
+  .admin-security-page .admin-security-panel {
+    padding: 10px 12px;
+  }
+
+  .admin-security-page .admin-security-panel h2 {
     font-size: 20px;
   }
 

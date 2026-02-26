@@ -6,6 +6,7 @@ require __DIR__ . '/../../../src/helpers.php';
 require __DIR__ . '/../../../src/auth.php';
 require __DIR__ . '/../../../src/layout.php';
 require __DIR__ . '/../../../src/admin_audit.php';
+require __DIR__ . '/../../../src/security.php';
 
 $me = require_permission($pdo, 'users.view');
 $tenantId = actor_tenant_id($me);
@@ -13,6 +14,25 @@ $canCreateUser = user_has_permission($me, 'users.create');
 $canEditUser = user_has_permission($me, 'users.edit');
 $canManageRoles = user_has_permission($me, 'users.role.manage');
 $canDeleteUser = user_has_permission($me, 'users.delete');
+$roleErrorCode = (string)($_GET['role_error'] ?? '');
+$roleErrorMessage = match ($roleErrorCode) {
+  'confirm_phrase' => 'Promotion blocked: type the exact confirmation phrase "MAKE ADMIN" to continue.',
+  'reauth_failed' => 'Re-authentication failed. Enter your current password and valid 2FA code (if enabled) before promoting a user to admin.',
+  'reauth_unavailable' => 'Re-authentication is currently unavailable. Please sign in again and retry.',
+  default => '',
+};
+$adminReauthRequiresTotp = false;
+if ($canManageRoles && ensure_user_twofa_columns($pdo)) {
+  $meSecurityStmt = $pdo->prepare(
+    "SELECT role, totp_secret, twofa_enabled_at
+     FROM users
+     WHERE id = ? AND tenant_id = ?
+     LIMIT 1"
+  );
+  $meSecurityStmt->execute([(int)$me['id'], $tenantId]);
+  $meSecurity = $meSecurityStmt->fetch();
+  $adminReauthRequiresTotp = is_array($meSecurity) && admin_twofa_enabled($meSecurity);
+}
 
 $stmt = $pdo->prepare(
   "SELECT id, name, email, role, created_at
@@ -34,6 +54,9 @@ render_header('Manage Users • CorePanel');
       | <a href="/admin/users/create.php">+ New Client</a>
     <?php endif; ?>
   </p>
+  <?php if ($roleErrorMessage !== ''): ?>
+    <ul><li><?= e($roleErrorMessage) ?></li></ul>
+  <?php endif; ?>
 
   <div class="admin-users-table-wrap">
     <table class="admin-users-table" border="1" cellpadding="8" cellspacing="0">
@@ -58,18 +81,34 @@ render_header('Manage Users • CorePanel');
                 <?php endif; ?>
 
                 <?php if ($canManageRoles): ?>
-                  <form method="post" action="/admin/users/role.php" class="admin-inline-form">
-                    <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
-                    <input type="hidden" name="id" value="<?= (int)$u['id'] ?>">
-                    <input type="hidden" name="role" value="<?= e($u['role']) ?>">
+                  <?php if ((string)$u['role'] === 'admin'): ?>
+                    <form method="post" action="/admin/users/role.php" class="admin-inline-form">
+                      <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
+                      <input type="hidden" name="id" value="<?= (int)$u['id'] ?>">
+                      <input type="hidden" name="role" value="<?= e($u['role']) ?>">
+                      <button
+                        class="admin-action-link admin-action-role admin-action-role-icon admin-action-role-admin-icon"
+                        type="submit"
+                        aria-label="Admin user (click to make user)"
+                        title="Admin user"
+                      >
+                        <i class="bi bi-shield-lock-fill" aria-hidden="true"></i>
+                      </button>
+                    </form>
+                  <?php else: ?>
                     <button
-                      class="admin-action-link admin-action-role<?= $u['role'] === 'admin' ? '' : ' admin-action-role-promote' ?>"
-                      type="submit"
+                      class="admin-action-link admin-action-role admin-action-role-icon admin-action-role-user-icon js-open-promote-modal"
+                      type="button"
+                      data-open-promote-modal="1"
+                      data-target-user-id="<?= (int)$u['id'] ?>"
+                      data-target-user-name="<?= e_attr((string)$u['name']) ?>"
+                      data-target-user-email="<?= e_attr((string)$u['email']) ?>"
+                      aria-label="User account (click to make admin)"
+                      title="User account"
                     >
-                      <i class="bi <?= $u['role'] === 'admin' ? 'bi-person' : 'bi-shield-lock' ?>" aria-hidden="true"></i>
-                      <span>Make <?= $u['role'] === 'admin' ? 'User' : 'Admin' ?></span>
+                      <i class="bi bi-person-fill" aria-hidden="true"></i>
                     </button>
-                  </form>
+                  <?php endif; ?>
                 <?php endif; ?>
 
                 <?php if ($canManageRoles && $canDeleteUser): ?>
@@ -97,6 +136,65 @@ render_header('Manage Users • CorePanel');
       </tbody>
     </table>
   </div>
+
+  <?php if ($canManageRoles): ?>
+    <div class="admin-promote-modal" data-promote-modal hidden>
+      <div class="admin-promote-modal-panel" data-promote-modal-panel role="dialog" aria-modal="true" aria-labelledby="promote-modal-title">
+        <h2 id="promote-modal-title">Confirm Admin Promotion</h2>
+        <p class="admin-promote-modal-target" data-promote-modal-target></p>
+        <p>Type <strong>MAKE ADMIN</strong> and confirm your credentials to continue.</p>
+
+        <form method="post" action="/admin/users/role.php" class="admin-promote-modal-form">
+          <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
+          <input type="hidden" name="id" value="" data-promote-user-id>
+          <input type="hidden" name="role" value="user">
+
+          <label>Confirmation phrase
+            <input
+              class="admin-role-reauth-input"
+              name="confirm_phrase"
+              type="text"
+              autocomplete="off"
+              placeholder="MAKE ADMIN"
+              required
+              data-promote-first-input
+            >
+          </label>
+
+          <label>Your current password
+            <input
+              class="admin-role-reauth-input"
+              name="confirm_password"
+              type="password"
+              autocomplete="current-password"
+              placeholder="Your password"
+              required
+            >
+          </label>
+
+          <?php if ($adminReauthRequiresTotp): ?>
+            <label>Your current 2FA code
+              <input
+                class="admin-role-reauth-input admin-role-reauth-input-code"
+                name="confirm_totp"
+                inputmode="numeric"
+                autocomplete="one-time-code"
+                pattern="[0-9]{6}"
+                maxlength="6"
+                placeholder="2FA"
+                required
+              >
+            </label>
+          <?php endif; ?>
+
+          <div class="admin-promote-modal-actions">
+            <button type="submit">Make Admin</button>
+            <button type="button" class="admin-promote-modal-cancel" data-close-promote-modal>Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  <?php endif; ?>
 
   <section class="admin-audit-section" aria-labelledby="admin-audit-title">
     <h2 id="admin-audit-title">Audit Trail</h2>

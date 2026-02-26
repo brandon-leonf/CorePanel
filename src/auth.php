@@ -678,6 +678,7 @@ function ac_seed_rbac_defaults(PDO $pdo): void {
     'project_tasks.delete.own' => 'Delete own project task',
     'project_images.manage.any' => 'Manage any tenant project images',
     'project_images.manage.own' => 'Manage own project images',
+    'payments.create' => 'Create project payments',
     'client.dashboard.view' => 'Access client dashboard',
     'items.manage.own' => 'Manage own items',
   ];
@@ -719,6 +720,7 @@ function ac_seed_rbac_defaults(PDO $pdo): void {
       'project_tasks.edit.any',
       'project_tasks.delete.any',
       'project_images.manage.any',
+      'payments.create',
     ],
     'client' => [
       'client.dashboard.view',

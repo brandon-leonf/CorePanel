@@ -533,6 +533,36 @@ function ensure_project_address_column(PDO $pdo): bool {
   }
 }
 
+function ensure_project_due_date_column(PDO $pdo): bool {
+  static $checked = false;
+  static $available = false;
+
+  if ($checked) {
+    return $available;
+  }
+
+  $checked = true;
+
+  try {
+    if (db_has_column($pdo, 'projects', 'due_date')) {
+      $available = true;
+      return true;
+    }
+
+    $pdo->exec("ALTER TABLE projects ADD COLUMN due_date DATE NULL AFTER project_address");
+    try {
+      $pdo->exec("ALTER TABLE projects ADD INDEX idx_projects_due_date (due_date)");
+    } catch (Throwable $e) {
+      // Index may already exist.
+    }
+    $available = true;
+    return true;
+  } catch (Throwable $e) {
+    $available = false;
+    return false;
+  }
+}
+
 function ensure_project_decliend_status(PDO $pdo): bool {
   static $checked = false;
   static $available = false;
