@@ -5,4 +5,4 @@ require __DIR__ . '/../src/helpers.php';
 
 require_login();
 $u = current_user($pdo);
-redirect(($u['role'] ?? 'user') === 'admin' ? '/admin/dashboard.php' : '/client/dashboard.php');
+redirect(user_has_permission($u ?? [], 'dashboard.admin.view') ? '/admin/dashboard.php' : '/client/dashboard.php');

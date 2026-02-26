@@ -6,9 +6,11 @@ require __DIR__ . '/../../../src/helpers.php';
 require __DIR__ . '/../../../src/auth.php';
 require __DIR__ . '/../../../src/layout.php';
 require __DIR__ . '/../../../src/admin_audit.php';
+require __DIR__ . '/../../../src/validation.php';
+require __DIR__ . '/../../../src/security.php';
 
-require_admin($pdo);
-$me = current_user($pdo);
+$me = require_permission($pdo, 'users.create');
+$tenantId = actor_tenant_id($me);
 
 $errors = [];
 $name = '';
@@ -21,11 +23,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     exit('Invalid CSRF token');
   }
 
-  $name = trim((string)($_POST['name'] ?? ''));
-  $email = trim((string)($_POST['email'] ?? ''));
+  $name = normalize_single_line((string)($_POST['name'] ?? ''));
+  $email = validate_email_input((string)($_POST['email'] ?? ''), $errors);
 
-  if ($name === '') $errors[] = "Name is required.";
-  if (!filter_var($email, FILTER_VALIDATE_EMAIL)) $errors[] = "Valid email required.";
+  validate_required_text($name, 'Name', 100, $errors);
 
   if (!$errors) {
     $exists = $pdo->prepare("SELECT id FROM users WHERE email = ?");
@@ -33,21 +34,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($exists->fetch()) {
       $errors[] = "Email already exists.";
     } else {
-      $tempPass = bin2hex(random_bytes(4)); // 8 chars
-      $hash = password_hash($tempPass, PASSWORD_DEFAULT);
+      try {
+        $tempPass = generate_temporary_password(16);
+        $hash = hash_password_secure($tempPass);
 
-      // role defaults to 'user' (client)
-      $ins = $pdo->prepare("INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, 'user')");
-      $ins->execute([$name, $email, $hash]);
-
-      if ($me) {
-        admin_audit_log(
-          $pdo,
-          (int)$me['id'],
-          'create_user',
-          (int)$pdo->lastInsertId(),
-          "Created user {$email} with role user"
+        // role defaults to 'user' (client), tenant-scoped
+        $ins = $pdo->prepare(
+          "INSERT INTO users (name, email, password_hash, role, tenant_id)
+           VALUES (?, ?, ?, 'user', ?)"
         );
+        $ins->execute([$name, $email, $hash, $tenantId]);
+        $newUserId = (int)$pdo->lastInsertId();
+        sync_user_legacy_role_binding($pdo, $newUserId, 'user');
+
+        if ($me) {
+          admin_audit_log(
+            $pdo,
+            (int)$me['id'],
+            'create_user',
+            $newUserId,
+            "Created user {$email} with role user",
+            $tenantId
+          );
+        }
+      } catch (Throwable $e) {
+        $errors[] = "Unable to create client right now.";
+        $tempPass = null;
       }
     }
   }

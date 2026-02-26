@@ -6,34 +6,49 @@ require __DIR__ . '/../../../src/auth.php';
 require __DIR__ . '/../../../src/helpers.php';
 require __DIR__ . '/../../../src/layout.php';
 require __DIR__ . '/../../../src/invoice.php';
+require __DIR__ . '/../../../src/validation.php';
+require __DIR__ . '/../../../src/security.php';
 
-require_admin($pdo);
+$me = require_permission($pdo, 'users.edit');
+$tenantId = actor_tenant_id($me);
+$projectNotesEnabled = ensure_project_notes_column($pdo);
+$projectAddressEnabled = ensure_project_address_column($pdo);
+security_prepare_sensitive_storage($pdo);
 
 start_session();
 
 $id = (int)($_GET['id'] ?? 0);
 if ($id <= 0) { http_response_code(400); exit('Bad request'); }
 
-$stmt = $pdo->prepare("SELECT id, name, email, role, phone, address, notes FROM users WHERE id = ? LIMIT 1");
-$stmt->execute([$id]);
+$user = require_user_in_tenant($pdo, $me, $id);
+
+$stmt = $pdo->prepare(
+  "SELECT id, name, email, role, phone, address, notes, tenant_id
+   FROM users
+   WHERE id = ? AND tenant_id = ?
+   LIMIT 1"
+);
+$stmt->execute([$id, $tenantId]);
 $user = $stmt->fetch();
 if (!$user) { http_response_code(404); exit('User not found'); }
 
 $errors = [];
 $name = (string)$user['name'];
 $email = (string)$user['email'];
-$phone = (string)($user['phone'] ?? '');
-$address = (string)($user['address'] ?? '');
-$notes = (string)($user['notes'] ?? '');
-$projectStatuses = ['draft', 'active', 'paused', 'completed'];
+$phone = (string)(security_read_user_phone($user['phone'] ?? null) ?? '');
+$address = (string)(security_read_user_address($user['address'] ?? null) ?? '');
+$notes = (string)(security_read_user_notes($user['notes'] ?? null) ?? '');
+$projectStatuses = project_statuses($pdo);
 $projectErrors = [];
-$projectTitle = trim((string)($_POST['project_title'] ?? ''));
-$projectDescription = trim((string)($_POST['project_description'] ?? ''));
+$projectTitle = normalize_single_line((string)($_POST['project_title'] ?? ''));
+$projectDescription = normalize_multiline((string)($_POST['project_description'] ?? ''));
+$projectNotes = normalize_multiline((string)($_POST['project_notes'] ?? ''));
+$projectAddress = normalize_multiline((string)($_POST['project_address'] ?? ''));
 $projectStatus = (string)($_POST['project_status'] ?? 'draft');
 $projects = [];
 $projectsLoadError = '';
-$me = current_user($pdo);
 $adminId = (int)($me['id'] ?? 0);
+$canEditLinkedProjects = user_has_permission($me, 'projects.edit.any') || (user_has_permission($me, 'projects.edit.own') && $id === (int)$me['id']);
 
 if (!in_array($projectStatus, $projectStatuses, true)) {
   $projectStatus = 'draft';
@@ -55,29 +70,98 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $action = (string)($_POST['action'] ?? 'update_user');
 
   if ($action === 'add_project') {
-    $projectTitle = trim((string)($_POST['project_title'] ?? ''));
-    $projectDescription = trim((string)($_POST['project_description'] ?? ''));
+    if (!user_has_permission($me, 'projects.create')) {
+      http_response_code(403);
+      exit('Forbidden');
+    }
+
+    $projectTitle = normalize_single_line((string)($_POST['project_title'] ?? ''));
+    $projectDescription = normalize_multiline((string)($_POST['project_description'] ?? ''));
+    $projectNotes = normalize_multiline((string)($_POST['project_notes'] ?? ''));
+    $projectAddress = normalize_multiline((string)($_POST['project_address'] ?? ''));
     $projectStatus = (string)($_POST['project_status'] ?? 'draft');
 
-    if ($projectTitle === '') $projectErrors[] = 'Project title is required.';
+    validate_required_text($projectTitle, 'Project title', 190, $projectErrors);
+    validate_optional_text($projectDescription, 'Project description', 10000, $projectErrors);
+    if ($projectNotesEnabled) {
+      validate_optional_text($projectNotes, 'Project notes', 5000, $projectErrors);
+    }
+    if ($projectAddressEnabled) {
+      validate_optional_text($projectAddress, 'Project address', 2000, $projectErrors);
+    }
     if (!in_array($projectStatus, $projectStatuses, true)) $projectErrors[] = 'Invalid project status.';
     if ($adminId <= 0) $projectErrors[] = 'Admin session is invalid. Please log in again.';
 
     if (!$projectErrors) {
       try {
         $projectNo = next_project_no($pdo);
-        $ins = $pdo->prepare("
-          INSERT INTO projects (project_no, user_id, title, description, status, created_by)
-          VALUES (?, ?, ?, ?, ?, ?)
-        ");
-        $ins->execute([
-          $projectNo,
-          $id,
-          $projectTitle,
-          $projectDescription === '' ? null : $projectDescription,
-          $projectStatus,
-          $adminId
-        ]);
+        $projectNotesStored = security_store_project_notes($projectNotes === '' ? null : $projectNotes);
+        $projectAddressStored = security_store_project_address($projectAddress === '' ? null : $projectAddress);
+        if ($projectNotesEnabled && $projectAddressEnabled) {
+          $ins = $pdo->prepare(
+            "INSERT INTO projects
+              (project_no, user_id, tenant_id, title, description, notes, project_address, status, created_by)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+          );
+          $ins->execute([
+            $projectNo,
+            $id,
+            $tenantId,
+            $projectTitle,
+            $projectDescription === '' ? null : $projectDescription,
+            $projectNotesStored,
+            $projectAddressStored,
+            $projectStatus,
+            $adminId,
+          ]);
+        } elseif ($projectNotesEnabled) {
+          $ins = $pdo->prepare(
+            "INSERT INTO projects
+              (project_no, user_id, tenant_id, title, description, notes, status, created_by)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+          );
+          $ins->execute([
+            $projectNo,
+            $id,
+            $tenantId,
+            $projectTitle,
+            $projectDescription === '' ? null : $projectDescription,
+            $projectNotesStored,
+            $projectStatus,
+            $adminId,
+          ]);
+        } elseif ($projectAddressEnabled) {
+          $ins = $pdo->prepare(
+            "INSERT INTO projects
+              (project_no, user_id, tenant_id, title, description, project_address, status, created_by)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+          );
+          $ins->execute([
+            $projectNo,
+            $id,
+            $tenantId,
+            $projectTitle,
+            $projectDescription === '' ? null : $projectDescription,
+            $projectAddressStored,
+            $projectStatus,
+            $adminId,
+          ]);
+        } else {
+          $ins = $pdo->prepare(
+            "INSERT INTO projects
+              (project_no, user_id, tenant_id, title, description, status, created_by)
+             VALUES (?, ?, ?, ?, ?, ?, ?)"
+          );
+          $ins->execute([
+            $projectNo,
+            $id,
+            $tenantId,
+            $projectTitle,
+            $projectDescription === '' ? null : $projectDescription,
+            $projectStatus,
+            $adminId,
+          ]);
+        }
 
         $newId = (int)$pdo->lastInsertId();
         redirect('/admin/projects/edit.php?id=' . $newId);
@@ -86,21 +170,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       }
     }
   } else {
-    $name = trim((string)($_POST['name'] ?? ''));
-    $email = trim((string)($_POST['email'] ?? ''));
-    $phone = trim((string)($_POST['phone'] ?? ''));
-    $address = trim((string)($_POST['address'] ?? ''));
-    $notes = trim((string)($_POST['notes'] ?? ''));
+    $name = normalize_single_line((string)($_POST['name'] ?? ''));
+    $email = validate_email_input((string)($_POST['email'] ?? ''), $errors);
+    $phone = validate_phone_optional((string)($_POST['phone'] ?? ''), $errors);
+    $address = normalize_multiline((string)($_POST['address'] ?? ''));
+    $notes = normalize_multiline((string)($_POST['notes'] ?? ''));
 
-    if ($phone !== '') {
-      $digits = preg_replace('/\D+/', '', $phone) ?? '';
-      if (strlen($digits) === 10) {
-        $phone = sprintf('(%s) %s %s', substr($digits, 0, 3), substr($digits, 3, 3), substr($digits, 6, 4));
-      }
-    }
-
-    if ($name === '') $errors[] = 'Name is required.';
-    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) $errors[] = 'Valid email required.';
+    validate_required_text($name, 'Name', 100, $errors);
+    validate_optional_text($address, 'Address', 2000, $errors);
+    validate_optional_text($notes, 'Notes', 5000, $errors);
 
     // Enforce unique email (excluding this user)
     if (!$errors) {
@@ -112,18 +190,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if (!$errors) {
+      $phoneStored = security_store_user_phone($phone === '' ? null : $phone);
+      $addressStored = security_store_user_address($address === '' ? null : $address);
+      $notesStored = security_store_user_notes($notes === '' ? null : $notes);
+
       $up = $pdo->prepare("
         UPDATE users
         SET name = ?, email = ?, phone = ?, address = ?, notes = ?
-        WHERE id = ?
+        WHERE id = ? AND tenant_id = ?
       ");
       $up->execute([
         $name,
         $email,
-        $phone === '' ? null : $phone,
-        $address === '' ? null : $address,
-        $notes === '' ? null : $notes,
-        $id
+        $phoneStored,
+        $addressStored,
+        $notesStored,
+        $id,
+        $tenantId
       ]);
 
       redirect('/admin/users/index.php');
@@ -135,10 +218,10 @@ try {
   $pstmt = $pdo->prepare("
     SELECT id, project_no, title, status, created_at
     FROM projects
-    WHERE user_id = ?
+    WHERE user_id = ? AND tenant_id = ?
     ORDER BY id DESC
   ");
-  $pstmt->execute([$id]);
+  $pstmt->execute([$id, $tenantId]);
   $projects = $pstmt->fetchAll();
 } catch (Throwable $e) {
   $projectsLoadError = 'Projects are not available yet. Confirm the projects tables are migrated.';
@@ -175,6 +258,7 @@ render_header('Edit User • CorePanel');
             id="phone"
             name="phone"
             value="<?= e($phone) ?>"
+            data-phone-format="us"
             inputmode="numeric"
             autocomplete="tel"
             placeholder="(000) 000 0000"
@@ -201,28 +285,42 @@ render_header('Edit User • CorePanel');
         <ul><?php foreach ($projectErrors as $err): ?><li><?= e($err) ?></li><?php endforeach; ?></ul>
       <?php endif; ?>
 
-      <form method="post" class="admin-user-project-create-form">
-        <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
-        <input type="hidden" name="action" value="add_project">
+      <?php if (user_has_permission($me, 'projects.create')): ?>
+        <form method="post" class="admin-user-project-create-form">
+          <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
+          <input type="hidden" name="action" value="add_project">
 
-        <label>Project Title<br>
-          <input name="project_title" value="<?= e($projectTitle) ?>" required>
-        </label>
+          <label>Project Title<br>
+            <input name="project_title" value="<?= e($projectTitle) ?>" required>
+          </label>
 
-        <label>Description<br>
-          <textarea name="project_description" rows="4"><?= e($projectDescription) ?></textarea>
-        </label>
+          <label>Description<br>
+            <textarea name="project_description" rows="4"><?= e($projectDescription) ?></textarea>
+          </label>
 
-        <label>Status<br>
-          <select name="project_status">
-            <?php foreach ($projectStatuses as $s): ?>
-              <option value="<?= e($s) ?>" <?= $projectStatus === $s ? 'selected' : '' ?>><?= e($s) ?></option>
-            <?php endforeach; ?>
-          </select>
-        </label>
+          <?php if ($projectNotesEnabled): ?>
+            <label>Notes<br>
+              <textarea name="project_notes" rows="4"><?= e($projectNotes) ?></textarea>
+            </label>
+          <?php endif; ?>
 
-        <button type="submit">Add Project</button>
-      </form>
+          <?php if ($projectAddressEnabled): ?>
+            <label>Project Address<br>
+              <textarea name="project_address" rows="3"><?= e($projectAddress) ?></textarea>
+            </label>
+          <?php endif; ?>
+
+          <label>Status<br>
+            <select name="project_status">
+              <?php foreach ($projectStatuses as $s): ?>
+                <option value="<?= e($s) ?>" <?= $projectStatus === $s ? 'selected' : '' ?>><?= e($s) ?></option>
+              <?php endforeach; ?>
+            </select>
+          </label>
+
+          <button type="submit">Add Project</button>
+        </form>
+      <?php endif; ?>
 
       <?php if ($projectsLoadError !== ''): ?>
         <p class="admin-user-projects-note"><?= e($projectsLoadError) ?></p>
@@ -248,9 +346,13 @@ render_header('Edit User • CorePanel');
                   <tr>
                     <td><?= e((string)$p['project_no']) ?></td>
                     <td><?= e((string)$p['title']) ?></td>
-                    <td><?= e((string)$p['status']) ?></td>
+                    <td><span class="<?= e(status_class((string)$p['status'])) ?>"><?= e((string)$p['status']) ?></span></td>
                     <td><?= e((string)$p['created_at']) ?></td>
-                    <td><a href="/admin/projects/edit.php?id=<?= (int)$p['id'] ?>">Edit</a></td>
+                    <td>
+                      <?php if ($canEditLinkedProjects): ?>
+                        <a href="/admin/projects/edit.php?id=<?= (int)$p['id'] ?>">Edit</a>
+                      <?php endif; ?>
+                    </td>
                   </tr>
                 <?php endforeach; ?>
               <?php endif; ?>
@@ -261,23 +363,4 @@ render_header('Edit User • CorePanel');
     </section>
   </div>
 </div>
-<script>
-  (function () {
-    const phoneInput = document.getElementById('phone');
-    if (!phoneInput) return;
-
-    function formatPhone(value) {
-      const digits = value.replace(/\D/g, '').slice(0, 10);
-      if (digits.length === 0) return '';
-      if (digits.length <= 3) return digits.length === 3 ? `(${digits}) ` : `(${digits}`;
-      if (digits.length <= 6) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
-      return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)} ${digits.slice(6)}`;
-    }
-
-    phoneInput.value = formatPhone(phoneInput.value);
-    phoneInput.addEventListener('input', () => {
-      phoneInput.value = formatPhone(phoneInput.value);
-    });
-  })();
-</script>
 <?php render_footer(); ?>

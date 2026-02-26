@@ -1,0 +1,19 @@
+Options -Indexes
+
+# Defense-in-depth in case web root is misconfigured above /public.
+<FilesMatch "(^\\.|\\.env(\\.|$)|composer\\.(json|lock)$|phpunit\\.xml$|.*\\.(sql|log|ini|bak|old|swp)$)">
+  <IfModule mod_authz_core.c>
+    Require all denied
+  </IfModule>
+  <IfModule !mod_authz_core.c>
+    Deny from all
+  </IfModule>
+</FilesMatch>
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteRule ^(?:config|storage|src|scripts|sql|docs|\\.git)(?:/|$) - [F,L,NC]
+  RewriteRule ^(?:phpinfo|debug|test)[A-Za-z0-9._-]*\\.php$ - [F,L,NC]
+  RewriteRule ^(?:csp_report)\\.php$ - [F,L,NC]
+  RewriteRule ^uploads(?:/.*)?$ - [F,L,NC]
+</IfModule>

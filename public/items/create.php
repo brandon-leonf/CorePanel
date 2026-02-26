@@ -6,10 +6,12 @@ require __DIR__ . '/../../src/helpers.php';
 require __DIR__ . '/../../src/auth.php';
 require __DIR__ . '/../../src/layout.php';
 require __DIR__ . '/../../src/upload.php';
+require __DIR__ . '/../../src/validation.php';
 
 require_login();
 $user = current_user($pdo);
 $userId = (int)$user['id'];
+$tenantId = actor_tenant_id($user);
 
 $errors = [];
 $title = '';
@@ -21,10 +23,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     exit('Invalid CSRF token');
   }
 
-  $title = trim((string)($_POST['title'] ?? ''));
-  $description = trim((string)($_POST['description'] ?? ''));
+  $title = normalize_single_line((string)($_POST['title'] ?? ''));
+  $description = normalize_multiline((string)($_POST['description'] ?? ''));
 
-  if ($title === '') $errors[] = 'Title is required.';
+  validate_required_text($title, 'Title', 160, $errors);
+  validate_optional_text($description, 'Description', 10000, $errors);
 
   $imagePath = null;
 
@@ -35,11 +38,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
   if (!$errors) {
     $stmt = $pdo->prepare("
-      INSERT INTO items (user_id, title, description, image_path)
-      VALUES (?, ?, ?, ?)
+      INSERT INTO items (user_id, tenant_id, title, description, image_path)
+      VALUES (?, ?, ?, ?, ?)
     ");
     $stmt->execute([
       $userId,
+      $tenantId,
       $title,
       $description === '' ? null : $description,
       $imagePath
@@ -70,7 +74,7 @@ render_header('New Item • CorePanel');
     </label>
 
     <label>Image (optional)<br>
-        <input type="file" name="image" accept="image/*">
+        <input type="file" name="image" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp">
     </label>
 
     <button type="submit">Create</button>

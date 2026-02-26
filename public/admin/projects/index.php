@@ -6,15 +6,29 @@ require __DIR__ . '/../../../src/auth.php';
 require __DIR__ . '/../../../src/helpers.php';
 require __DIR__ . '/../../../src/layout.php';
 
-require_admin($pdo);
+$me = require_any_permission($pdo, ['projects.view.any', 'projects.view.own']);
+$tenantId = actor_tenant_id($me);
+$canViewAny = user_has_permission($me, 'projects.view.any');
+$canCreateProject = user_has_permission($me, 'projects.create');
+$actorId = (int)$me['id'];
 
-$stmt = $pdo->query("
-  SELECT p.id, p.project_no, p.title, p.status, p.created_at,
+$sql = "
+  SELECT p.id, p.user_id, p.project_no, p.title, p.status, p.created_at,
          u.name AS client_name, u.email AS client_email
   FROM projects p
   JOIN users u ON u.id = p.user_id
-  ORDER BY p.id DESC
-");
+  WHERE p.tenant_id = ?
+";
+$params = [$tenantId];
+
+if (!$canViewAny) {
+  $sql .= " AND p.user_id = ? ";
+  $params[] = (int)$me['id'];
+}
+
+$sql .= " ORDER BY p.id DESC ";
+$stmt = $pdo->prepare($sql);
+$stmt->execute($params);
 $projects = $stmt->fetchAll();
 
 render_header('Projects • Admin • CorePanel');
@@ -22,8 +36,10 @@ render_header('Projects • Admin • CorePanel');
 <div class="container container-wide admin-projects-page">
   <h1>Projects</h1>
   <p>
-    <a href="/admin/dashboard.php">← Admin Dashboard</a> |
-    <a href="/admin/projects/create.php">+ New Project</a>
+    <a href="/admin/dashboard.php">← Admin Dashboard</a>
+    <?php if ($canCreateProject): ?>
+      | <a href="/admin/projects/create.php">+ New Project</a>
+    <?php endif; ?>
   </p>
 
   <div class="admin-projects-table-wrap">
@@ -49,12 +65,16 @@ render_header('Projects • Admin • CorePanel');
               <td><?= e($p['project_no']) ?></td>
               <td><?= e($p['title']) ?></td>
               <td><?= e($p['client_name']) ?> (<?= e($p['client_email']) ?>)</td>
-              <td><?= e($p['status']) ?></td>
+              <td><span class="<?= e(status_class((string)$p['status'])) ?>"><?= e((string)$p['status']) ?></span></td>
               <td><?= e((string)$p['created_at']) ?></td>
               <td class="admin-project-actions-cell">
                 <div class="admin-project-actions">
-                  <a class="admin-project-action-link" href="/admin/projects/edit.php?id=<?= (int)$p['id'] ?>">Edit</a>
-                  <a class="admin-project-action-link" href="/admin/projects/print.php?id=<?= (int)$p['id'] ?>&autoprint=1" target="_blank" rel="noopener">Print PDF</a>
+                  <?php if (user_has_permission($me, 'projects.edit.any') || (user_has_permission($me, 'projects.edit.own') && (int)$p['user_id'] === $actorId)): ?>
+                    <a class="admin-project-action-link" href="/admin/projects/edit.php?id=<?= (int)$p['id'] ?>">Edit</a>
+                  <?php endif; ?>
+                  <?php if (user_has_permission($me, 'projects.print.any') || (user_has_permission($me, 'projects.print.own') && (int)$p['user_id'] === $actorId)): ?>
+                    <a class="admin-project-action-link" href="/admin/projects/print.php?id=<?= (int)$p['id'] ?>&autoprint=1" target="_blank" rel="noopener">Print PDF</a>
+                  <?php endif; ?>
                 </div>
               </td>
             </tr>

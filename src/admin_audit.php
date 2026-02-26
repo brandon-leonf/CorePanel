@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/rate_limit.php';
+
 function admin_audit_ensure_table(PDO $pdo): void {
   static $ensured = false;
   if ($ensured) {
@@ -30,7 +32,8 @@ function admin_audit_log(
   int $actorUserId,
   string $action,
   ?int $targetUserId = null,
-  ?string $summary = null
+  ?string $summary = null,
+  ?int $tenantId = null
 ): void {
   admin_audit_ensure_table($pdo);
 
@@ -41,9 +44,15 @@ function admin_audit_log(
      VALUES (?, ?, ?, ?, ?)"
   );
   $stmt->execute([$actorUserId, $targetUserId, $action, $summary, $ip === '' ? null : $ip]);
+
+  try {
+    rl_record_admin_activity($pdo, $actorUserId, $action, $targetUserId, $summary, $tenantId);
+  } catch (Throwable $e) {
+    error_log('[SECURITY WARN] Failed to mirror admin audit event into monitoring: ' . $e->getMessage());
+  }
 }
 
-function admin_audit_recent(PDO $pdo, int $limit = 25): array {
+function admin_audit_recent(PDO $pdo, int $limit = 25, int $tenantId = 0): array {
   admin_audit_ensure_table($pdo);
 
   $safeLimit = max(1, min(200, $limit));
@@ -63,10 +72,24 @@ function admin_audit_recent(PDO $pdo, int $limit = 25): array {
     FROM admin_user_audit_logs l
     LEFT JOIN users actor ON actor.id = l.actor_user_id
     LEFT JOIN users target ON target.id = l.target_user_id
-    ORDER BY l.id DESC
-    LIMIT {$safeLimit}
   ";
 
-  $rows = $pdo->query($sql);
-  return $rows ? $rows->fetchAll() : [];
+  $params = [];
+  if ($tenantId > 0) {
+    $sql .= " WHERE actor.tenant_id = ? OR target.tenant_id = ? ";
+    $params[] = $tenantId;
+    $params[] = $tenantId;
+  }
+
+  $sql .= " ORDER BY l.id DESC LIMIT ? ";
+  $stmt = $pdo->prepare($sql);
+
+  $paramIndex = 1;
+  foreach ($params as $value) {
+    $stmt->bindValue($paramIndex, (int)$value, PDO::PARAM_INT);
+    $paramIndex++;
+  }
+  $stmt->bindValue($paramIndex, $safeLimit, PDO::PARAM_INT);
+  $stmt->execute();
+  return $stmt->fetchAll();
 }

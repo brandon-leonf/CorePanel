@@ -6,16 +6,18 @@ require __DIR__ . '/../../src/helpers.php';
 require __DIR__ . '/../../src/auth.php';
 require __DIR__ . '/../../src/layout.php';
 require __DIR__ . '/../../src/upload.php';
+require __DIR__ . '/../../src/validation.php';
 
 require_login();
 $user = current_user($pdo);
 $userId = (int)$user['id'];
+$tenantId = actor_tenant_id($user);
 
 $id = (int)($_GET['id'] ?? 0);
 if ($id <= 0) { http_response_code(400); exit('Bad request'); }
 
-$stmt = $pdo->prepare("SELECT id, title, description, image_path FROM items WHERE id = ? AND user_id = ?");
-$stmt->execute([$id, $userId]);
+$stmt = $pdo->prepare("SELECT id, title, description, image_path FROM items WHERE id = ? AND user_id = ? AND tenant_id = ?");
+$stmt->execute([$id, $userId, $tenantId]);
 $item = $stmt->fetch();
 
 if (!$item) { http_response_code(404); exit('Item not found'); }
@@ -23,6 +25,7 @@ if (!$item) { http_response_code(404); exit('Item not found'); }
 $errors = [];
 $title = (string)$item['title'];
 $description = (string)($item['description'] ?? '');
+$currentImagePath = (string)($item['image_path'] ?? '');
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!csrf_verify((string)($_POST['csrf_token'] ?? ''))) {
@@ -30,13 +33,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       exit('Invalid CSRF token');
     }
 
-    $title = trim((string)($_POST['title'] ?? ''));
-    $description = trim((string)($_POST['description'] ?? ''));
+    $title = normalize_single_line((string)($_POST['title'] ?? ''));
+    $description = normalize_multiline((string)($_POST['description'] ?? ''));
   
-    if ($title === '') $errors[] = 'Title is required.';
+    validate_required_text($title, 'Title', 160, $errors);
+    validate_optional_text($description, 'Description', 10000, $errors);
   
     // Keep current image by default
-    $newImagePath = $item['image_path'] ?? null;
+    $newImagePath = $currentImagePath !== '' ? $currentImagePath : null;
+    $oldImagePath = $currentImagePath !== '' ? $currentImagePath : null;
   
     // If a new image was uploaded, replace it
     if (!empty($_FILES['image']) && $_FILES['image']['error'] !== UPLOAD_ERR_NO_FILE) {
@@ -52,15 +57,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       $up = $pdo->prepare("
         UPDATE items
         SET title = ?, description = ?, image_path = ?
-        WHERE id = ? AND user_id = ?
+        WHERE id = ? AND user_id = ? AND tenant_id = ?
       ");
       $up->execute([
         $title,
         $description === '' ? null : $description,
         $newImagePath,
         $id,
-        $userId
+        $userId,
+        $tenantId
       ]);
+
+      $newImagePathStr = (string)($newImagePath ?? '');
+      $oldImagePathStr = (string)($oldImagePath ?? '');
+      if ($oldImagePathStr !== '' && $oldImagePathStr !== $newImagePathStr) {
+        upload_delete_reference_if_unreferenced($pdo, $oldImagePathStr);
+      }
   
       redirect('/items/index.php');
     }
@@ -89,17 +101,17 @@ render_header('Edit Item • CorePanel');
 
     <?php if (!empty($item['image_path'])): ?>
     <p>Current image:<br>
-        <img src="<?= e($item['image_path']) ?>" alt="" style="max-width:180px; height:auto;">
+        <img src="<?= e_url_attr((string)$item['image_path'], 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==') ?>" alt="" style="max-width:180px; height:auto;">
     </p>
     <?php endif; ?>
 
     <label>Replace image (optional)<br>
         <?php if (!empty($item['image_path'])): ?>
             <p>Current image:<br>
-                <img src="<?= e($item['image_path']) ?>" style="max-width:180px; height:auto;">
+                <img src="<?= e_url_attr((string)$item['image_path'], 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==') ?>" style="max-width:180px; height:auto;">
             </p>
         <?php endif; ?>
-        <input type="file" name="image" accept="image/*">
+        <input type="file" name="image" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp">
     </label>
     <button type="submit">Save</button>
   </form>

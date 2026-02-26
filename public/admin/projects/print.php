@@ -4,38 +4,62 @@ declare(strict_types=1);
 $pdo = require __DIR__ . '/../../../config/db.php';
 require __DIR__ . '/../../../src/auth.php';
 require __DIR__ . '/../../../src/helpers.php';
+require __DIR__ . '/../../../src/security.php';
+require __DIR__ . '/../../../src/rate_limit.php';
 
-require_admin($pdo);
+$me = require_any_permission($pdo, ['projects.print.any', 'projects.print.own']);
+send_security_headers(true);
+ensure_project_notes_column($pdo);
+ensure_project_address_column($pdo);
 
 $id = (int)($_GET['id'] ?? 0);
 if ($id <= 0) {
   http_response_code(400);
   exit('Bad request');
 }
+require_project_access($pdo, $me, $id, 'print');
+$tenantId = actor_tenant_id($me);
 $autoPrint = (string)($_GET['autoprint'] ?? '') === '1';
 
-$pstmt = $pdo->prepare("
-  SELECT p.id, p.project_no, p.title, p.description, p.status, p.created_at,
-         u.name AS client_name, u.email AS client_email
-  FROM projects p
-  JOIN users u ON u.id = p.user_id
-  WHERE p.id = ?
-  LIMIT 1
-");
-$pstmt->execute([$id]);
+$pstmt = $pdo->prepare(
+  "SELECT
+     p.id,
+     p.project_no,
+     p.title,
+     p.description,
+     p.notes,
+     p.project_address,
+     p.status,
+     p.created_at,
+     u.name AS client_name,
+     u.email AS client_email
+   FROM projects p
+   JOIN users u ON u.id = p.user_id
+   WHERE p.id = ? AND p.tenant_id = ?
+   LIMIT 1"
+);
+$pstmt->execute([$id, $tenantId]);
 $project = $pstmt->fetch();
 if (!$project) {
   http_response_code(404);
   exit('Project not found');
 }
 
+rl_record_download_activity($pdo, $me, 'project_export_print', 'project:' . $id);
+
+$project['notes'] = security_read_project_notes($project['notes'] ?? null);
+$project['project_address'] = security_read_project_address($project['project_address'] ?? null);
+
 $tstmt = $pdo->prepare("
-  SELECT task_title, task_description, rate, quantity, amount, status
-  FROM project_tasks
-  WHERE project_id = ?
-  ORDER BY id ASC
+  SELECT t.task_title, t.task_description, t.rate, t.quantity, t.amount, t.status
+  FROM project_tasks t
+  JOIN projects p ON p.id = t.project_id
+  WHERE t.project_id = ?
+    AND t.tenant_id = ?
+    AND p.tenant_id = ?
+  ORDER BY t.id ASC
 ");
-$tstmt->execute([$id]);
+$tstmt->execute([$id, $tenantId, $tenantId]);
 $tasks = $tstmt->fetchAll();
 
 $total = 0.0;
@@ -163,10 +187,10 @@ foreach ($tasks as $task) {
     }
   </style>
 </head>
-<body>
+<body<?= $autoPrint ? ' data-autoprint="1"' : '' ?>>
   <div class="toolbar">
     <a href="/admin/dashboard.php">Back to Dashboard</a>
-    <button type="button" onclick="window.print()">Print / Save PDF</button>
+    <button type="button" data-print-window="1">Print / Save PDF</button>
   </div>
 
   <main class="sheet">
@@ -190,6 +214,16 @@ foreach ($tasks as $task) {
     <?php if (!empty($project['description'])): ?>
       <h2 class="section-title">Description</h2>
       <p class="description"><?= nl2br(e((string)$project['description'])) ?></p>
+    <?php endif; ?>
+
+    <?php if (!empty($project['project_address'])): ?>
+      <h2 class="section-title">Project Address</h2>
+      <p class="description"><?= nl2br(e((string)$project['project_address'])) ?></p>
+    <?php endif; ?>
+
+    <?php if (!empty($project['notes'])): ?>
+      <h2 class="section-title">Notes</h2>
+      <p class="description"><?= nl2br(e((string)$project['notes'])) ?></p>
     <?php endif; ?>
 
     <h2 class="section-title">Tasks</h2>
@@ -222,12 +256,6 @@ foreach ($tasks as $task) {
       <p class="total"><strong>Total:</strong> $<?= number_format($total, 2) ?></p>
     <?php endif; ?>
   </main>
-  <?php if ($autoPrint): ?>
-  <script>
-    window.addEventListener('load', function () {
-      window.print();
-    });
-  </script>
-  <?php endif; ?>
+  <script src="/assets/js/app.js" defer></script>
 </body>
 </html>

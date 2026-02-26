@@ -551,6 +551,163 @@ nav a:hover {
   text-align: left;
 }
 
+.admin-project-edit-page .admin-project-edit-images-section {
+  margin-top: 16px;
+  padding: 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(11, 16, 24, 0.58);
+}
+
+.admin-project-edit-page .admin-project-edit-images-section h2 {
+  margin: 0 0 10px;
+  text-align: left;
+  font-size: 25px;
+  line-height: 1.1;
+}
+
+.admin-project-edit-page .admin-project-edit-images-upload-form {
+  margin: 0 0 12px;
+  max-width: 460px;
+}
+
+.admin-project-edit-page .admin-project-edit-images-upload-form input[type="file"] {
+  height: auto;
+  padding: 10px 12px;
+}
+
+.admin-project-edit-page .admin-project-edit-images-note {
+  margin: 0;
+  color: var(--muted);
+}
+
+.admin-project-edit-page .admin-project-edit-images-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.admin-project-edit-page .admin-project-edit-image-card {
+  margin: 0;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.admin-project-edit-page .admin-project-edit-image-card img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  margin-bottom: 8px;
+}
+
+.admin-project-edit-page .admin-project-edit-media-actions {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.admin-project-edit-page .admin-project-edit-media-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 30px;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.05);
+  color: #dce8ff;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.admin-project-edit-page .admin-project-edit-media-link:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.admin-project-edit-page .admin-project-edit-documents-title {
+  margin: 14px 0 10px;
+  text-align: left;
+  font-size: 20px;
+}
+
+.admin-project-edit-page .admin-project-edit-documents-list {
+  display: grid;
+  gap: 10px;
+}
+
+.admin-project-edit-page .admin-project-edit-document-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.admin-project-edit-page .admin-project-edit-document-meta {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.admin-project-edit-page .admin-project-edit-document-meta strong {
+  overflow-wrap: anywhere;
+}
+
+.admin-project-edit-page .admin-project-edit-document-meta small {
+  color: var(--muted);
+}
+
+.admin-project-edit-page .admin-project-edit-document-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.admin-project-edit-page .admin-project-edit-document-actions form {
+  margin: 0;
+}
+
+.admin-project-edit-page .admin-project-edit-document-delete-btn {
+  width: auto;
+  min-width: 0;
+  height: auto;
+  margin-top: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: #ff5d6f;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.admin-project-edit-page .admin-project-edit-document-delete-btn:hover {
+  text-decoration: underline;
+}
+
+.admin-project-edit-page .admin-project-edit-image-delete-form {
+  margin: 0;
+}
+
+.admin-project-edit-page .admin-project-edit-image-delete-btn {
+  width: 100%;
+  height: 34px;
+  margin-top: 0;
+  font-size: 13px;
+  background: linear-gradient(180deg, #ff5d6f, #df4253);
+}
+
 .container.admin-projects-page {
   --card-max-width: 1240px;
 }
@@ -861,6 +1018,32 @@ nav a:hover {
   color: var(--muted);
 }
 
+.container.client-projects-page {
+  --card-max-width: 1240px;
+}
+
+.client-projects-page .client-projects-list {
+  margin-top: 18px;
+  text-align: left;
+  padding: 14px 16px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(11, 16, 24, 0.72);
+}
+
+.client-projects-page .client-projects-list h2 {
+  margin: 0 0 8px;
+  text-align: left;
+  font-size: 24px;
+  letter-spacing: -0.01em;
+}
+
+.client-projects-page .client-projects-list > p {
+  margin: 0;
+  text-align: left;
+  color: var(--muted);
+}
+
 .container.client-project-view-page {
   --card-max-width: 1180px;
 }
@@ -876,6 +1059,144 @@ nav a:hover {
 .client-project-view-page .client-project-view-description {
   margin: 0 0 14px;
   color: #b8c7de;
+}
+
+.client-project-view-page .client-project-view-notes-section {
+  margin: 0 0 14px;
+  padding: 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(11, 16, 24, 0.72);
+}
+
+.client-project-view-page .client-project-view-notes-section h2 {
+  margin: 0 0 10px;
+  text-align: left;
+  font-size: 22px;
+  letter-spacing: -0.01em;
+}
+
+.client-project-view-page .client-project-view-notes {
+  margin: 0;
+  color: #b8c7de;
+  line-height: 1.5;
+}
+
+.client-project-view-page .client-project-view-images-section {
+  margin: 0;
+  padding: 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(11, 16, 24, 0.72);
+}
+
+.client-project-view-page .client-project-view-images-section h2 {
+  margin: 0 0 10px;
+  text-align: left;
+  font-size: 22px;
+  letter-spacing: -0.01em;
+}
+
+.client-project-view-page .client-project-view-images-note {
+  margin: 0;
+  color: var(--muted);
+}
+
+.client-project-view-page .client-project-view-upload-form {
+  margin: 0 0 12px;
+  max-width: 460px;
+}
+
+.client-project-view-page .client-project-view-upload-form input[type="file"] {
+  height: auto;
+  padding: 10px 12px;
+}
+
+.client-project-view-page .client-project-view-images-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.client-project-view-page .client-project-view-image-card {
+  display: block;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.client-project-view-page .client-project-view-image-card img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+}
+
+.client-project-view-page .client-project-view-image-actions {
+  display: flex;
+  gap: 8px;
+  padding: 8px;
+}
+
+.client-project-view-page .client-project-view-image-actions a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 30px;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.05);
+  color: #dce8ff;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.client-project-view-page .client-project-view-image-actions a:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.client-project-view-page .client-project-view-documents-list {
+  display: grid;
+  gap: 10px;
+}
+
+.client-project-view-page .client-project-view-document-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.client-project-view-page .client-project-view-document-item strong {
+  overflow-wrap: anywhere;
+}
+
+.client-project-view-page .client-project-view-document-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.client-project-view-page .client-project-view-document-actions a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 30px;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.05);
+  color: #dce8ff;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 600;
 }
 
 .client-project-view-page .client-project-view-tasks-section {
@@ -1025,6 +1346,22 @@ ul {
 
 li + li {
   margin-top: 4px;
+}
+
+.status-text {
+  font-weight: 600;
+}
+
+.status-text-active {
+  color: #b57bff;
+}
+
+.status-text-success {
+  color: #39d98a;
+}
+
+.status-text-danger {
+  color: #ff5d6f;
 }
 
 form {
@@ -1197,7 +1534,9 @@ button:active {
     min-width: 940px;
   }
 
-  .client-project-view-page .client-project-view-tasks-section h2 {
+  .client-project-view-page .client-project-view-tasks-section h2,
+  .client-project-view-page .client-project-view-notes-section h2,
+  .client-project-view-page .client-project-view-images-section h2 {
     font-size: 22px;
   }
 
@@ -1205,7 +1544,15 @@ button:active {
     min-width: 700px;
   }
 
+  .client-project-view-page .client-project-view-images-grid {
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  }
+
   .client-dashboard-page .client-dashboard-projects h2 {
+    font-size: 22px;
+  }
+
+  .client-projects-page .client-projects-list h2 {
     font-size: 22px;
   }
 
@@ -1219,12 +1566,17 @@ button:active {
   }
 
   .admin-project-edit-page .admin-project-edit-panel h2,
-  .admin-project-edit-page .admin-project-edit-tasks-section h2 {
+  .admin-project-edit-page .admin-project-edit-tasks-section h2,
+  .admin-project-edit-page .admin-project-edit-images-section h2 {
     font-size: 22px;
   }
 
   .admin-project-edit-page .admin-project-edit-tasks-table {
     min-width: 700px;
+  }
+
+  .admin-project-edit-page .admin-project-edit-images-grid {
+    grid-template-columns: repeat(auto-fill, minmax(165px, 1fr));
   }
 
   .admin-user-edit-page .admin-user-edit-layout {
@@ -1382,16 +1734,24 @@ button:active {
   }
 
   .admin-project-edit-page .admin-project-edit-panel,
-  .admin-project-edit-page .admin-project-edit-tasks-section {
+  .admin-project-edit-page .admin-project-edit-tasks-section,
+  .admin-project-edit-page .admin-project-edit-images-section {
     padding: 12px 10px 10px;
   }
 
-  .client-project-view-page .client-project-view-tasks-section {
+  .client-project-view-page .client-project-view-tasks-section,
+  .client-project-view-page .client-project-view-notes-section,
+  .client-project-view-page .client-project-view-images-section {
     padding: 12px 10px 10px;
   }
 
   .client-project-view-page .client-project-view-tasks-table {
     min-width: 620px;
+  }
+
+  .client-project-view-page .client-project-view-images-grid {
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 10px;
   }
 
   .admin-projects-page .admin-projects-table {
@@ -1405,6 +1765,15 @@ button:active {
 
   .admin-project-edit-page .admin-project-edit-tasks-table {
     min-width: 640px;
+  }
+
+  .admin-project-edit-page .admin-project-edit-images-grid {
+    grid-template-columns: repeat(auto-fill, minmax(145px, 1fr));
+    gap: 10px;
+  }
+
+  .admin-project-edit-page .admin-project-edit-image-delete-btn {
+    height: 32px;
   }
 
   .admin-user-edit-page .admin-user-profile-panel,
@@ -1491,6 +1860,14 @@ button:active {
   }
 
   .client-dashboard-page .client-dashboard-projects h2 {
+    font-size: 20px;
+  }
+
+  .client-projects-page .client-projects-list {
+    padding: 10px 12px;
+  }
+
+  .client-projects-page .client-projects-list h2 {
     font-size: 20px;
   }
 

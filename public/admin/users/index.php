@@ -7,17 +7,33 @@ require __DIR__ . '/../../../src/auth.php';
 require __DIR__ . '/../../../src/layout.php';
 require __DIR__ . '/../../../src/admin_audit.php';
 
-require_admin($pdo);
+$me = require_permission($pdo, 'users.view');
+$tenantId = actor_tenant_id($me);
+$canCreateUser = user_has_permission($me, 'users.create');
+$canEditUser = user_has_permission($me, 'users.edit');
+$canManageRoles = user_has_permission($me, 'users.role.manage');
+$canDeleteUser = user_has_permission($me, 'users.delete');
 
-$stmt = $pdo->query("SELECT id, name, email, role, created_at FROM users ORDER BY created_at DESC");
+$stmt = $pdo->prepare(
+  "SELECT id, name, email, role, created_at
+   FROM users
+   WHERE tenant_id = ?
+   ORDER BY created_at DESC"
+);
+$stmt->execute([$tenantId]);
 $users = $stmt->fetchAll();
-$auditRows = admin_audit_recent($pdo, 30);
+$auditRows = admin_audit_recent($pdo, 30, $tenantId);
 
 render_header('Manage Users • CorePanel');
 ?>
 <div class="container container-wide admin-users-page">
   <h1>Manage Users</h1>
-  <p><a href="/admin/dashboard.php">← Admin Dashboard</a> | <a href="/admin/users/create.php">+ New Client</a></p>
+  <p>
+    <a href="/admin/dashboard.php">← Admin Dashboard</a>
+    <?php if ($canCreateUser): ?>
+      | <a href="/admin/users/create.php">+ New Client</a>
+    <?php endif; ?>
+  </p>
 
   <div class="admin-users-table-wrap">
     <table class="admin-users-table" border="1" cellpadding="8" cellspacing="0">
@@ -33,36 +49,47 @@ render_header('Manage Users • CorePanel');
             <td><?= e((string)$u['created_at']) ?></td>
             <td class="admin-user-actions-cell">
               <div class="admin-user-actions-inline" role="group" aria-label="User actions">
-                <a class="admin-action-link admin-action-edit" href="/admin/users/edit.php?id=<?= (int)$u['id'] ?>">Edit</a>
-                <span class="admin-action-sep">|</span>
+                <?php if ($canEditUser): ?>
+                  <a class="admin-action-link admin-action-edit" href="/admin/users/edit.php?id=<?= (int)$u['id'] ?>">Edit</a>
+                <?php endif; ?>
 
-                <form method="post" action="/admin/users/role.php" class="admin-inline-form">
-                  <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
-                  <input type="hidden" name="id" value="<?= (int)$u['id'] ?>">
-                  <input type="hidden" name="role" value="<?= e($u['role']) ?>">
-                  <button
-                    class="admin-action-link admin-action-role<?= $u['role'] === 'admin' ? '' : ' admin-action-role-promote' ?>"
-                    type="submit"
-                  >
-                    <i class="bi <?= $u['role'] === 'admin' ? 'bi-person' : 'bi-shield-lock' ?>" aria-hidden="true"></i>
-                    <span>Make <?= $u['role'] === 'admin' ? 'User' : 'Admin' ?></span>
-                  </button>
-                </form>
+                <?php if ($canEditUser && ($canManageRoles || $canDeleteUser)): ?>
+                  <span class="admin-action-sep">|</span>
+                <?php endif; ?>
 
-                <span class="admin-action-sep">|</span>
+                <?php if ($canManageRoles): ?>
+                  <form method="post" action="/admin/users/role.php" class="admin-inline-form">
+                    <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
+                    <input type="hidden" name="id" value="<?= (int)$u['id'] ?>">
+                    <input type="hidden" name="role" value="<?= e($u['role']) ?>">
+                    <button
+                      class="admin-action-link admin-action-role<?= $u['role'] === 'admin' ? '' : ' admin-action-role-promote' ?>"
+                      type="submit"
+                    >
+                      <i class="bi <?= $u['role'] === 'admin' ? 'bi-person' : 'bi-shield-lock' ?>" aria-hidden="true"></i>
+                      <span>Make <?= $u['role'] === 'admin' ? 'User' : 'Admin' ?></span>
+                    </button>
+                  </form>
+                <?php endif; ?>
 
-                <form method="post" action="/admin/users/delete.php" class="admin-inline-form">
-                  <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
-                  <input type="hidden" name="id" value="<?= (int)$u['id'] ?>">
-                  <button
-                    class="admin-action-link admin-action-delete"
-                    type="submit"
-                    onclick="return confirm('Delete this user? This will also delete their items.')"
-                    aria-label="Delete user"
-                  >
-                    <i class="bi bi-trash3" aria-hidden="true"></i>
-                  </button>
-                </form>
+                <?php if ($canManageRoles && $canDeleteUser): ?>
+                  <span class="admin-action-sep">|</span>
+                <?php endif; ?>
+
+                <?php if ($canDeleteUser): ?>
+                  <form method="post" action="/admin/users/delete.php" class="admin-inline-form">
+                    <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
+                    <input type="hidden" name="id" value="<?= (int)$u['id'] ?>">
+                    <button
+                      class="admin-action-link admin-action-delete"
+                      type="submit"
+                      data-confirm="Delete this user? This will also delete their items."
+                      aria-label="Delete user"
+                    >
+                      <i class="bi bi-trash3" aria-hidden="true"></i>
+                    </button>
+                  </form>
+                <?php endif; ?>
               </div>
             </td>
           </tr>

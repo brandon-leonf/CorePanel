@@ -5,8 +5,10 @@ $pdo = require __DIR__ . '/../../../config/db.php';
 require __DIR__ . '/../../../src/auth.php';
 require __DIR__ . '/../../../src/helpers.php';
 require __DIR__ . '/../../../src/layout.php';
+require __DIR__ . '/../../../src/validation.php';
 
-require_admin($pdo);
+$me = require_any_permission($pdo, ['project_tasks.edit.any', 'project_tasks.edit.own']);
+$tenantId = actor_tenant_id($me);
 
 $projectId = (int)($_GET['project_id'] ?? $_POST['project_id'] ?? 0);
 $taskId = (int)($_GET['task_id'] ?? $_POST['task_id'] ?? 0);
@@ -14,15 +16,16 @@ if ($projectId <= 0 || $taskId <= 0) {
   http_response_code(400);
   exit('Bad request');
 }
+require_project_access($pdo, $me, $projectId, 'task_edit');
 
 $stmt = $pdo->prepare("
   SELECT t.*, p.project_no, p.title AS project_title
   FROM project_tasks t
   JOIN projects p ON p.id = t.project_id
-  WHERE t.id = ? AND t.project_id = ?
+  WHERE t.id = ? AND t.project_id = ? AND t.tenant_id = ? AND p.tenant_id = ?
   LIMIT 1
 ");
-$stmt->execute([$taskId, $projectId]);
+$stmt->execute([$taskId, $projectId, $tenantId, $tenantId]);
 $task = $stmt->fetch();
 if (!$task) {
   http_response_code(404);
@@ -34,6 +37,8 @@ $taskTitle = (string)$task['task_title'];
 $taskDescription = (string)($task['task_description'] ?? '');
 $rate = (float)$task['rate'];
 $quantity = (float)$task['quantity'];
+$rateInput = number_format($rate, 2, '.', '');
+$quantityInput = number_format($quantity, 2, '.', '');
 $status = (string)$task['status'];
 $validStatuses = ['todo', 'in_progress', 'done'];
 
@@ -43,21 +48,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     exit('Invalid CSRF token');
   }
 
-  $taskTitle = trim((string)($_POST['task_title'] ?? ''));
-  $taskDescription = trim((string)($_POST['task_description'] ?? ''));
-  $rate = (float)($_POST['rate'] ?? 0);
-  $quantity = (float)($_POST['quantity'] ?? 1);
+  $taskTitle = normalize_single_line((string)($_POST['task_title'] ?? ''));
+  $taskDescription = normalize_multiline((string)($_POST['task_description'] ?? ''));
+  $rateInput = trim((string)($_POST['rate'] ?? ''));
+  $quantityInput = trim((string)($_POST['quantity'] ?? ''));
+  $rate = validate_decimal_input($rateInput, 'Rate', 0.0, 99999999.99, $errors);
+  $quantity = validate_decimal_input($quantityInput, 'Quantity', 0.0, 99999999.99, $errors);
   $status = (string)($_POST['status'] ?? 'todo');
 
-  if ($taskTitle === '') {
-    $errors[] = 'Task title is required.';
-  }
-  if ($rate < 0) {
-    $errors[] = 'Rate must be >= 0.';
-  }
-  if ($quantity < 0) {
-    $errors[] = 'Quantity must be >= 0.';
-  }
+  validate_required_text($taskTitle, 'Task title', 190, $errors);
+  validate_optional_text($taskDescription, 'Task description', 5000, $errors);
   if (!in_array($status, $validStatuses, true)) {
     $errors[] = 'Invalid task status.';
   }
@@ -65,9 +65,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   if (!$errors) {
     $amount = round($rate * $quantity, 2);
     $up = $pdo->prepare("
-      UPDATE project_tasks
+      UPDATE project_tasks t
+      JOIN projects p ON p.id = t.project_id
       SET task_title = ?, task_description = ?, rate = ?, quantity = ?, amount = ?, status = ?
-      WHERE id = ? AND project_id = ?
+      WHERE t.id = ? AND t.project_id = ? AND t.tenant_id = ? AND p.tenant_id = ?
     ");
     $up->execute([
       $taskTitle,
@@ -77,7 +78,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       $amount,
       $status,
       $taskId,
-      $projectId
+      $projectId,
+      $tenantId,
+      $tenantId
     ]);
 
     redirect('/admin/projects/edit.php?id=' . $projectId);
@@ -113,11 +116,11 @@ render_header('Edit Task • Admin • CorePanel');
     </label>
 
     <label>Rate<br>
-      <input name="rate" type="number" step="0.01" value="<?= e(number_format($rate, 2, '.', '')) ?>" required>
+      <input name="rate" type="number" step="0.01" value="<?= e($rateInput) ?>" required>
     </label>
 
     <label>Quantity<br>
-      <input name="quantity" type="number" step="0.01" value="<?= e(number_format($quantity, 2, '.', '')) ?>" required>
+      <input name="quantity" type="number" step="0.01" value="<?= e($quantityInput) ?>" required>
     </label>
 
     <label>Status<br>

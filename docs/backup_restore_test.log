@@ -1,0 +1,12 @@
+# Backup restore drill evidence log
+# Append entries via:
+# ./scripts/security/run_backup_restore_drill.sh --database <source_db> --restore-db <target_db>
+----
+[2026-02-26T02:26:32Z] Starting backup/restore drill for source DB: corepanel
+Warning: A partial dump from a server that has GTIDs will by default include the GTIDs of all transactions, even those that changed suppressed parts of the database. If you don't want to restore GTIDs, pass --set-gtid-purged=OFF. To make a complete dump, pass --all-databases --triggers --routines --events. 
+Encrypted backup created: storage/backups/corepanel_20260226T022632Z.sql.gz.enc
+Checksum file: storage/backups/corepanel_20260226T022632Z.sql.gz.enc.sha256
+PASS: Backup decrypt + decompression verified: storage/backups/corepanel_20260226T022632Z.sql.gz.enc
+Restore completed into database: corepanel_restore_test
+Full restore test executed against DB: corepanel_restore_test
+[2026-02-26T02:26:33Z] Drill completed successfully.

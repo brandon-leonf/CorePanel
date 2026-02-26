@@ -15,8 +15,7 @@ if (!csrf_verify((string)($_POST['csrf_token'] ?? ''))) {
   exit('Invalid CSRF token');
 }
 
-$_SESSION = [];
-session_destroy();
+destroy_current_session();
 
 header('Location: /login.php');
 exit;

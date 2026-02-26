@@ -1,0 +1,40 @@
+# Disable directory listing in public web root.
+Options -Indexes
+
+# Raise upload limits for media/PDF uploads when running with Apache + mod_php.
+<IfModule mod_php.c>
+  php_value upload_max_filesize 20M
+  php_value post_max_size 25M
+  php_value max_file_uploads 20
+</IfModule>
+<IfModule mod_php8.c>
+  php_value upload_max_filesize 20M
+  php_value post_max_size 25M
+  php_value max_file_uploads 20
+</IfModule>
+
+# Block dotfiles and accidental secret/config artifacts in the web root.
+<FilesMatch "(^\\.|\\.env(\\.|$)|composer\\.(json|lock)$|phpunit\\.xml$|.*\\.(sql|log|ini|bak|old|swp)$)">
+  <IfModule mod_authz_core.c>
+    Require all denied
+  </IfModule>
+  <IfModule !mod_authz_core.c>
+    Deny from all
+  </IfModule>
+</FilesMatch>
+
+# Debug/test routes must not be web-accessible in production.
+<FilesMatch "^(phpinfo|debug|test)[A-Za-z0-9._-]*\\.php$|^csp_report\\.php$">
+  <IfModule mod_authz_core.c>
+    Require all denied
+  </IfModule>
+  <IfModule !mod_authz_core.c>
+    Deny from all
+  </IfModule>
+</FilesMatch>
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  # Legacy uploads must never be served directly; use /file.php authorization gate.
+  RewriteRule ^uploads(?:/.*)?$ - [F,L,NC]
+</IfModule>

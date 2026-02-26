@@ -6,19 +6,33 @@ require __DIR__ . '/../../../src/auth.php';
 require __DIR__ . '/../../../src/helpers.php';
 require __DIR__ . '/../../../src/layout.php';
 require __DIR__ . '/../../../src/invoice.php';
+require __DIR__ . '/../../../src/validation.php';
+require __DIR__ . '/../../../src/security.php';
 
-require_admin($pdo);
+$me = require_permission($pdo, 'projects.create');
+$projectNotesEnabled = ensure_project_notes_column($pdo);
+$projectAddressEnabled = ensure_project_address_column($pdo);
+security_prepare_sensitive_storage($pdo);
+$projectStatuses = project_statuses($pdo);
 
-$me = current_user($pdo);
 $adminId = (int)$me['id'];
+$tenantId = actor_tenant_id($me);
 
-$usersStmt = $pdo->query("SELECT id, name, email FROM users WHERE role='user' ORDER BY name ASC");
+$usersStmt = $pdo->prepare(
+  "SELECT id, name, email
+   FROM users
+   WHERE role = ? AND tenant_id = ?
+   ORDER BY name ASC"
+);
+$usersStmt->execute(['user', $tenantId]);
 $clients = $usersStmt->fetchAll();
 
 $errors = [];
 $userId = (int)($_POST['user_id'] ?? 0);
-$title = (string)($_POST['title'] ?? '');
-$description = (string)($_POST['description'] ?? '');
+$title = normalize_single_line((string)($_POST['title'] ?? ''));
+$description = normalize_multiline((string)($_POST['description'] ?? ''));
+$notes = normalize_multiline((string)($_POST['notes'] ?? ''));
+$projectAddress = normalize_multiline((string)($_POST['project_address'] ?? ''));
 $status = (string)($_POST['status'] ?? 'active');
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -28,29 +42,104 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   }
 
   $userId = (int)($_POST['user_id'] ?? 0);
-  $title = trim((string)($_POST['title'] ?? ''));
-  $description = trim((string)($_POST['description'] ?? ''));
+  $title = normalize_single_line((string)($_POST['title'] ?? ''));
+  $description = normalize_multiline((string)($_POST['description'] ?? ''));
+  $notes = normalize_multiline((string)($_POST['notes'] ?? ''));
+  $projectAddress = normalize_multiline((string)($_POST['project_address'] ?? ''));
   $status = (string)($_POST['status'] ?? 'active');
 
   if ($userId <= 0) $errors[] = 'Client is required.';
-  if ($title === '') $errors[] = 'Title is required.';
-  if (!in_array($status, ['draft','active','paused','completed'], true)) $errors[] = 'Invalid status.';
+  if ($userId > 0) {
+    $clientCheckStmt = $pdo->prepare(
+      "SELECT id
+       FROM users
+       WHERE id = ? AND tenant_id = ? AND role = 'user'
+       LIMIT 1"
+    );
+    $clientCheckStmt->execute([$userId, $tenantId]);
+    if (!$clientCheckStmt->fetch()) {
+      $errors[] = 'Selected client is not in your tenant.';
+    }
+  }
+  validate_required_text($title, 'Title', 190, $errors);
+  validate_optional_text($description, 'Description', 10000, $errors);
+  if ($projectNotesEnabled) {
+    validate_optional_text($notes, 'Notes', 5000, $errors);
+  }
+  if ($projectAddressEnabled) {
+    validate_optional_text($projectAddress, 'Project address', 2000, $errors);
+  }
+  if (!in_array($status, $projectStatuses, true)) $errors[] = 'Invalid status.';
 
   if (!$errors) {
     $projectNo = next_project_no($pdo);
-
-    $ins = $pdo->prepare("
-      INSERT INTO projects (project_no, user_id, title, description, status, created_by)
-      VALUES (?, ?, ?, ?, ?, ?)
-    ");
-    $ins->execute([
-      $projectNo,
-      $userId,
-      $title,
-      $description === '' ? null : $description,
-      $status,
-      $adminId
-    ]);
+    $notesStored = security_store_project_notes($notes === '' ? null : $notes);
+    $projectAddressStored = security_store_project_address($projectAddress === '' ? null : $projectAddress);
+    if ($projectNotesEnabled && $projectAddressEnabled) {
+      $ins = $pdo->prepare(
+        "INSERT INTO projects
+          (project_no, user_id, tenant_id, title, description, notes, project_address, status, created_by)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+      );
+      $ins->execute([
+        $projectNo,
+        $userId,
+        $tenantId,
+        $title,
+        $description === '' ? null : $description,
+        $notesStored,
+        $projectAddressStored,
+        $status,
+        $adminId,
+      ]);
+    } elseif ($projectNotesEnabled) {
+      $ins = $pdo->prepare(
+        "INSERT INTO projects
+          (project_no, user_id, tenant_id, title, description, notes, status, created_by)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+      );
+      $ins->execute([
+        $projectNo,
+        $userId,
+        $tenantId,
+        $title,
+        $description === '' ? null : $description,
+        $notesStored,
+        $status,
+        $adminId,
+      ]);
+    } elseif ($projectAddressEnabled) {
+      $ins = $pdo->prepare(
+        "INSERT INTO projects
+          (project_no, user_id, tenant_id, title, description, project_address, status, created_by)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+      );
+      $ins->execute([
+        $projectNo,
+        $userId,
+        $tenantId,
+        $title,
+        $description === '' ? null : $description,
+        $projectAddressStored,
+        $status,
+        $adminId,
+      ]);
+    } else {
+      $ins = $pdo->prepare(
+        "INSERT INTO projects
+          (project_no, user_id, tenant_id, title, description, status, created_by)
+         VALUES (?, ?, ?, ?, ?, ?, ?)"
+      );
+      $ins->execute([
+        $projectNo,
+        $userId,
+        $tenantId,
+        $title,
+        $description === '' ? null : $description,
+        $status,
+        $adminId,
+      ]);
+    }
 
     $newId = (int)$pdo->lastInsertId();
     redirect('/admin/projects/edit.php?id=' . $newId);
@@ -92,9 +181,23 @@ render_header('New Project • Admin • CorePanel');
     </label>
     <br><br>
 
+    <?php if ($projectNotesEnabled): ?>
+      <label>Notes<br>
+        <textarea name="notes" rows="4"><?= e($notes) ?></textarea>
+      </label>
+      <br><br>
+    <?php endif; ?>
+
+    <?php if ($projectAddressEnabled): ?>
+      <label>Project Address<br>
+        <textarea name="project_address" rows="3"><?= e($projectAddress) ?></textarea>
+      </label>
+      <br><br>
+    <?php endif; ?>
+
     <label>Status<br>
       <select name="status">
-        <?php foreach (['draft','active','paused','completed'] as $s): ?>
+        <?php foreach ($projectStatuses as $s): ?>
           <option value="<?= e($s) ?>" <?= $status === $s ? 'selected' : '' ?>><?= e($s) ?></option>
         <?php endforeach; ?>
       </select>

@@ -6,10 +6,10 @@ require __DIR__ . '/../../src/helpers.php';
 require __DIR__ . '/../../src/auth.php';
 require __DIR__ . '/../../src/layout.php';
 
-require_login();
-$me = current_user($pdo);
+$me = require_permission($pdo, 'client.dashboard.view');
+$tenantId = actor_tenant_id($me);
 
-if (($me['role'] ?? 'user') === 'admin') {
+if (user_has_permission($me, 'dashboard.admin.view')) {
   redirect('/admin/dashboard.php');
 }
 
@@ -21,10 +21,10 @@ try {
   $stmt = $pdo->prepare("
     SELECT id, project_no, title, status, created_at
     FROM projects
-    WHERE user_id = ?
+    WHERE user_id = ? AND tenant_id = ?
     ORDER BY id DESC
   ");
-  $stmt->execute([$userId]);
+  $stmt->execute([$userId, $tenantId]);
   $projects = $stmt->fetchAll();
 } catch (Throwable $e) {
   $projectsLoadError = 'Projects are not available yet.';
@@ -74,7 +74,7 @@ render_header('Client Dashboard • CorePanel');
                 <tr>
                   <td><?= e((string)$p['project_no']) ?></td>
                   <td><?= e((string)$p['title']) ?></td>
-                  <td><?= e((string)$p['status']) ?></td>
+                  <td><span class="<?= e(status_class((string)$p['status'])) ?>"><?= e((string)$p['status']) ?></span></td>
                   <td><?= e((string)$p['created_at']) ?></td>
                   <td><a class="admin-project-action-link" href="/client/projects/view.php?id=<?= (int)$p['id'] ?>">View</a></td>
                 </tr>
