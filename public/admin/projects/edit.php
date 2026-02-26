@@ -867,7 +867,7 @@ render_header('Edit Project • Admin • CorePanel');
       </div>
 
       <div class="admin-project-edit-payments-progress-row">
-        <div class="payment-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="<?= e($paymentProgressPercent) ?>">
+        <div class="payment-progress payment-progress-<?= e((string)$paymentSnapshot['status_key']) ?>" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="<?= e($paymentProgressPercent) ?>">
           <span class="payment-progress-fill" style="width: <?= e($paymentProgressPercent) ?>%;"></span>
         </div>
         <small class="payment-progress-caption"><?= e($paymentProgressPercent) ?>%</small>

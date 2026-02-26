@@ -38,10 +38,19 @@ $stmt = $pdo->prepare(
   "SELECT id, name, email, role, created_at
    FROM users
    WHERE tenant_id = ?
-   ORDER BY created_at DESC"
+   ORDER BY CASE WHEN LOWER(role) = 'admin' THEN 0 ELSE 1 END, created_at DESC"
 );
 $stmt->execute([$tenantId]);
 $users = $stmt->fetchAll();
+$adminCount = 0;
+$clientCount = 0;
+foreach ($users as $userRow) {
+  if (strtolower(trim((string)($userRow['role'] ?? ''))) === 'admin') {
+    $adminCount++;
+  } else {
+    $clientCount++;
+  }
+}
 $auditRows = admin_audit_recent($pdo, 30, $tenantId);
 
 render_header('Manage Users • CorePanel');
@@ -58,81 +67,118 @@ render_header('Manage Users • CorePanel');
     <ul><li><?= e($roleErrorMessage) ?></li></ul>
   <?php endif; ?>
 
+  <section class="admin-users-filter-panel" aria-labelledby="client-filter-title">
+    <h2 id="client-filter-title">Users</h2>
+    <p>Admins are listed first. Search filters clients only.</p>
+    <div class="admin-users-filter-meta">
+      <span>Admins: <?= number_format((float)$adminCount, 0) ?></span>
+      <span>Clients: <?= number_format((float)$clientCount, 0) ?></span>
+    </div>
+    <label class="admin-users-filter-label" for="client-filter-input">Search Clients</label>
+    <input
+      id="client-filter-input"
+      type="search"
+      class="admin-users-filter-input"
+      placeholder="Search client name or email"
+      autocomplete="off"
+      data-client-filter-input
+    >
+  </section>
+
   <div class="admin-users-table-wrap">
     <table class="admin-users-table" border="1" cellpadding="8" cellspacing="0">
       <thead>
         <tr><th>Name</th><th>Email</th><th>Role</th><th>Created</th><th>Actions</th></tr>
       </thead>
       <tbody>
-        <?php foreach ($users as $u): ?>
+        <?php if (!$users): ?>
           <tr>
-            <td><?= e($u['name']) ?></td>
-            <td><?= e($u['email']) ?></td>
-            <td><?= e($u['role']) ?></td>
-            <td><?= e((string)$u['created_at']) ?></td>
-            <td class="admin-user-actions-cell">
-              <div class="admin-user-actions-inline" role="group" aria-label="User actions">
-                <?php if ($canEditUser): ?>
-                  <a class="admin-action-link admin-action-edit" href="/admin/users/edit.php?id=<?= (int)$u['id'] ?>">Edit</a>
-                <?php endif; ?>
+            <td colspan="5">No users yet.</td>
+          </tr>
+        <?php else: ?>
+          <?php foreach ($users as $u): ?>
+            <?php
+              $userRole = strtolower(trim((string)($u['role'] ?? '')));
+              $isAdminRow = $userRole === 'admin';
+              $clientSearchText = strtolower(trim((string)$u['name'] . ' ' . (string)$u['email']));
+            ?>
+            <tr
+              data-user-row
+              data-user-role="<?= e_attr($userRole) ?>"
+              data-client-row="<?= $isAdminRow ? '0' : '1' ?>"
+              data-client-search="<?= e_attr($clientSearchText) ?>"
+            >
+              <td><?= e($u['name']) ?></td>
+              <td><?= e($u['email']) ?></td>
+              <td><?= e($u['role']) ?></td>
+              <td><?= e((string)$u['created_at']) ?></td>
+              <td class="admin-user-actions-cell">
+                <div class="admin-user-actions-inline" role="group" aria-label="User actions">
+                  <?php if ($canEditUser): ?>
+                    <a class="admin-action-link admin-action-edit" href="/admin/users/edit.php?id=<?= (int)$u['id'] ?>">Edit</a>
+                  <?php endif; ?>
 
-                <?php if ($canEditUser && ($canManageRoles || $canDeleteUser)): ?>
-                  <span class="admin-action-sep">|</span>
-                <?php endif; ?>
+                  <?php if ($canEditUser && ($canManageRoles || $canDeleteUser)): ?>
+                    <span class="admin-action-sep">|</span>
+                  <?php endif; ?>
 
-                <?php if ($canManageRoles): ?>
-                  <?php if ((string)$u['role'] === 'admin'): ?>
-                    <form method="post" action="/admin/users/role.php" class="admin-inline-form">
+                  <?php if ($canManageRoles): ?>
+                    <?php if ($isAdminRow): ?>
+                      <form method="post" action="/admin/users/role.php" class="admin-inline-form">
+                        <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
+                        <input type="hidden" name="id" value="<?= (int)$u['id'] ?>">
+                        <input type="hidden" name="role" value="<?= e($u['role']) ?>">
+                        <button
+                          class="admin-action-link admin-action-role admin-action-role-icon admin-action-role-admin-icon"
+                          type="submit"
+                          aria-label="Admin user (click to make user)"
+                          title="Admin user"
+                        >
+                          <i class="bi bi-shield-lock-fill" aria-hidden="true"></i>
+                        </button>
+                      </form>
+                    <?php else: ?>
+                      <button
+                        class="admin-action-link admin-action-role admin-action-role-icon admin-action-role-user-icon js-open-promote-modal"
+                        type="button"
+                        data-open-promote-modal="1"
+                        data-target-user-id="<?= (int)$u['id'] ?>"
+                        data-target-user-name="<?= e_attr((string)$u['name']) ?>"
+                        data-target-user-email="<?= e_attr((string)$u['email']) ?>"
+                        aria-label="User account (click to make admin)"
+                        title="User account"
+                      >
+                        <i class="bi bi-person-fill" aria-hidden="true"></i>
+                      </button>
+                    <?php endif; ?>
+                  <?php endif; ?>
+
+                  <?php if ($canManageRoles && $canDeleteUser): ?>
+                    <span class="admin-action-sep">|</span>
+                  <?php endif; ?>
+
+                  <?php if ($canDeleteUser): ?>
+                    <form method="post" action="/admin/users/delete.php" class="admin-inline-form">
                       <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
                       <input type="hidden" name="id" value="<?= (int)$u['id'] ?>">
-                      <input type="hidden" name="role" value="<?= e($u['role']) ?>">
                       <button
-                        class="admin-action-link admin-action-role admin-action-role-icon admin-action-role-admin-icon"
+                        class="admin-action-link admin-action-delete"
                         type="submit"
-                        aria-label="Admin user (click to make user)"
-                        title="Admin user"
+                        data-confirm="Delete this user? This will also delete their items."
+                        aria-label="Delete user"
                       >
-                        <i class="bi bi-shield-lock-fill" aria-hidden="true"></i>
+                        <i class="bi bi-trash3" aria-hidden="true"></i>
                       </button>
                     </form>
-                  <?php else: ?>
-                    <button
-                      class="admin-action-link admin-action-role admin-action-role-icon admin-action-role-user-icon js-open-promote-modal"
-                      type="button"
-                      data-open-promote-modal="1"
-                      data-target-user-id="<?= (int)$u['id'] ?>"
-                      data-target-user-name="<?= e_attr((string)$u['name']) ?>"
-                      data-target-user-email="<?= e_attr((string)$u['email']) ?>"
-                      aria-label="User account (click to make admin)"
-                      title="User account"
-                    >
-                      <i class="bi bi-person-fill" aria-hidden="true"></i>
-                    </button>
                   <?php endif; ?>
-                <?php endif; ?>
-
-                <?php if ($canManageRoles && $canDeleteUser): ?>
-                  <span class="admin-action-sep">|</span>
-                <?php endif; ?>
-
-                <?php if ($canDeleteUser): ?>
-                  <form method="post" action="/admin/users/delete.php" class="admin-inline-form">
-                    <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
-                    <input type="hidden" name="id" value="<?= (int)$u['id'] ?>">
-                    <button
-                      class="admin-action-link admin-action-delete"
-                      type="submit"
-                      data-confirm="Delete this user? This will also delete their items."
-                      aria-label="Delete user"
-                    >
-                      <i class="bi bi-trash3" aria-hidden="true"></i>
-                    </button>
-                  </form>
-                <?php endif; ?>
-              </div>
-            </td>
+                </div>
+              </td>
+            </tr>
+          <?php endforeach; ?>
+          <tr class="admin-users-no-client-match" data-no-client-match hidden>
+            <td colspan="5">No clients match your search.</td>
           </tr>
-        <?php endforeach; ?>
+        <?php endif; ?>
       </tbody>
     </table>
   </div>

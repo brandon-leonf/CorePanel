@@ -88,6 +88,7 @@ render_header('Projects • Admin • CorePanel');
         <?php else: ?>
           <?php foreach ($projects as $p): ?>
             <?php
+              $canEditProject = user_has_permission($me, 'projects.edit.any') || (user_has_permission($me, 'projects.edit.own') && (int)$p['user_id'] === $actorId);
               $paymentSnapshot = project_payment_snapshot(
                 (float)($p['project_total_amount'] ?? 0.0),
                 (float)($p['paid_amount'] ?? 0.0)
@@ -106,7 +107,7 @@ render_header('Projects • Admin • CorePanel');
                 <span class="<?= e(project_payment_status_class((string)$paymentSnapshot['status_key'])) ?>">
                   <?= e((string)$paymentSnapshot['status_label']) ?>
                 </span>
-                <div class="payment-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="<?= e($paymentProgressPercent) ?>">
+                <div class="payment-progress payment-progress-<?= e((string)$paymentSnapshot['status_key']) ?>" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="<?= e($paymentProgressPercent) ?>">
                   <span class="payment-progress-fill" style="width: <?= e($paymentProgressPercent) ?>%;"></span>
                 </div>
                 <small class="payment-progress-caption"><?= e($paymentProgressPercent) ?>%</small>
@@ -114,11 +115,27 @@ render_header('Projects • Admin • CorePanel');
               <td><?= e((string)$p['created_at']) ?></td>
               <td class="admin-project-actions-cell">
                 <div class="admin-project-actions">
-                  <?php if (user_has_permission($me, 'projects.edit.any') || (user_has_permission($me, 'projects.edit.own') && (int)$p['user_id'] === $actorId)): ?>
+                  <?php if ($canEditProject): ?>
                     <a class="admin-project-action-link" href="/admin/projects/edit.php?id=<?= (int)$p['id'] ?>">Edit</a>
                   <?php endif; ?>
                   <?php if (user_has_permission($me, 'projects.print.any') || (user_has_permission($me, 'projects.print.own') && (int)$p['user_id'] === $actorId)): ?>
                     <a class="admin-project-action-link" href="/admin/projects/print.php?id=<?= (int)$p['id'] ?>&autoprint=1" target="_blank" rel="noopener">Print PDF</a>
+                  <?php endif; ?>
+                  <?php if ($canEditProject): ?>
+                    <form method="post" action="/admin/projects/delete.php" class="admin-project-inline-form">
+                      <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
+                      <input type="hidden" name="id" value="<?= (int)$p['id'] ?>">
+                      <input type="hidden" name="return_to" value="/admin/projects/index.php">
+                      <button
+                        class="admin-project-action-link admin-project-action-button admin-project-action-delete"
+                        type="submit"
+                        data-confirm="Delete this project? This will remove its tasks, media, and payments."
+                        aria-label="Delete project"
+                        title="Delete project"
+                      >
+                        <i class="bi bi-trash3" aria-hidden="true"></i>
+                      </button>
+                    </form>
                   <?php endif; ?>
                 </div>
               </td>

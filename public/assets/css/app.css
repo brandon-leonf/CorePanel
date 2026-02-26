@@ -156,6 +156,46 @@ nav a:hover {
   overflow: hidden;
 }
 
+.admin-users-page .admin-users-filter-panel {
+  margin: 0 0 12px;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(11, 16, 24, 0.56);
+}
+
+.admin-users-page .admin-users-filter-panel h2 {
+  margin: 0 0 6px;
+  text-align: left;
+  font-size: 22px;
+}
+
+.admin-users-page .admin-users-filter-panel > p {
+  margin: 0 0 8px;
+  text-align: left;
+  color: var(--muted);
+}
+
+.admin-users-page .admin-users-filter-meta {
+  display: flex;
+  gap: 14px;
+  margin: 0 0 8px;
+  color: #c8d7eb;
+  font-size: 13px;
+}
+
+.admin-users-page .admin-users-filter-label {
+  margin: 0 0 6px;
+  display: block;
+  font-size: 13px;
+  color: #c8d7eb;
+}
+
+.admin-users-page .admin-users-filter-input {
+  width: min(100%, 440px);
+  margin-top: 0;
+}
+
 .admin-users-page .admin-users-table-wrap {
   width: 100%;
   overflow-x: auto;
@@ -231,6 +271,11 @@ nav a:hover {
 .admin-users-page .admin-users-table td:nth-child(5) {
   white-space: nowrap;
   text-align: left;
+}
+
+.admin-users-page .admin-users-no-client-match td {
+  text-align: center;
+  color: var(--muted);
 }
 
 .admin-users-page .admin-user-actions-cell {
@@ -1018,8 +1063,35 @@ nav a:hover {
   text-decoration: none;
 }
 
+.admin-projects-page .admin-project-inline-form {
+  margin: 0;
+  display: inline;
+}
+
+.admin-projects-page .admin-project-action-button {
+  width: auto;
+  min-width: 0;
+  height: auto;
+  margin-top: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  line-height: 1;
+  font-size: inherit;
+}
+
 .admin-projects-page .admin-project-action-link:hover {
   text-decoration: underline;
+}
+
+.admin-projects-page .admin-project-action-delete,
+.admin-projects-page .admin-project-action-delete .bi {
+  color: #ff5d6f;
 }
 
 .admin-projects-page .admin-projects-table th:nth-child(8),
@@ -1756,6 +1828,156 @@ nav a:hover {
   margin: 12px 0 0;
 }
 
+.client-project-view-page .client-project-view-payments-section {
+  margin-top: 14px;
+  padding: 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(11, 16, 24, 0.72);
+}
+
+.client-project-view-page .client-project-view-payments-section h2 {
+  margin: 0 0 10px;
+  text-align: left;
+  font-size: 22px;
+  letter-spacing: -0.01em;
+}
+
+.client-project-view-page .client-project-view-payments-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0 0 8px;
+}
+
+.client-project-view-page .client-project-view-payments-stat {
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.client-project-view-page .client-project-view-payments-stat span {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.client-project-view-page .client-project-view-payments-stat strong {
+  display: block;
+  margin-top: 6px;
+  font-size: 18px;
+}
+
+.client-project-view-page .client-project-view-payments-progress-row {
+  margin: 0 0 10px;
+}
+
+.client-project-view-page .client-project-view-payments-wrap {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 4px;
+}
+
+.client-project-view-page .client-project-view-payments-table {
+  width: 100%;
+  min-width: 860px;
+  border-collapse: collapse;
+}
+
+.client-project-view-page .client-project-view-payments-table th,
+.client-project-view-page .client-project-view-payments-table td {
+  text-align: left;
+  vertical-align: top;
+}
+
+.client-project-view-page .client-project-view-payment-actions {
+  white-space: nowrap;
+}
+
+.client-project-view-page .client-project-view-payment-actions a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 30px;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.05);
+  color: #dce8ff;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.client-project-view-page .client-project-view-payment-actions a + a {
+  margin-left: 8px;
+}
+
+.container.client-receipt-page {
+  --card-max-width: 960px;
+  text-align: left;
+}
+
+.client-receipt-page .client-receipt-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.client-receipt-page .client-receipt-controls button {
+  width: auto;
+  min-width: 160px;
+  margin-top: 0;
+}
+
+.client-receipt-page .client-receipt-sheet {
+  padding: 16px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(11, 16, 24, 0.72);
+}
+
+.client-receipt-page .client-receipt-sheet h1 {
+  margin: 0;
+  text-align: left;
+  font-size: 30px;
+}
+
+.client-receipt-page .client-receipt-subtitle {
+  margin: 4px 0 12px;
+  color: var(--muted);
+}
+
+.client-receipt-page .client-receipt-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.client-receipt-page .client-receipt-table th,
+.client-receipt-page .client-receipt-table td {
+  text-align: left;
+  vertical-align: top;
+}
+
+.client-receipt-page .client-receipt-table th {
+  width: 22%;
+  background: rgba(255, 255, 255, 0.06);
+  white-space: nowrap;
+}
+
+.client-receipt-page .client-receipt-thankyou {
+  margin: 12px 0 0;
+  font-size: 20px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
 /* register.php fallback layout (when markup is not wrapped in .container) */
 nav + h1,
 nav + h1 + ul,
@@ -1894,7 +2116,15 @@ li + li {
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, #1b8eff, #39d98a);
+  background: #1b8eff;
+}
+
+.payment-progress.payment-progress-partial .payment-progress-fill {
+  background: #ffcf4d;
+}
+
+.payment-progress.payment-progress-paid .payment-progress-fill {
+  background: #39d98a;
 }
 
 .payment-progress-caption {
@@ -2082,12 +2312,17 @@ button:active {
 
   .client-project-view-page .client-project-view-tasks-section h2,
   .client-project-view-page .client-project-view-notes-section h2,
-  .client-project-view-page .client-project-view-images-section h2 {
+  .client-project-view-page .client-project-view-images-section h2,
+  .client-project-view-page .client-project-view-payments-section h2 {
     font-size: 22px;
   }
 
   .client-project-view-page .client-project-view-tasks-table {
     min-width: 700px;
+  }
+
+  .client-project-view-page .client-project-view-payments-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .client-project-view-page .client-project-view-images-grid {
@@ -2302,6 +2537,42 @@ button:active {
   }
 }
 
+@media print {
+  nav,
+  .client-receipt-page .client-receipt-controls {
+    display: none !important;
+  }
+
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  .container.client-receipt-page {
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    max-width: none !important;
+    box-shadow: none !important;
+    border: 0 !important;
+    background: #ffffff !important;
+  }
+
+  .client-receipt-page .client-receipt-sheet {
+    border: 1px solid #444444;
+    box-shadow: none;
+    background: #ffffff;
+  }
+
+  .client-receipt-page .client-receipt-subtitle {
+    color: #333333;
+  }
+
+  .client-receipt-page .client-receipt-table th {
+    background: #eceff4;
+  }
+}
+
 @media (max-width: 560px) {
   .container {
     width: min(
@@ -2325,7 +2596,8 @@ button:active {
 
   .client-project-view-page .client-project-view-tasks-section,
   .client-project-view-page .client-project-view-notes-section,
-  .client-project-view-page .client-project-view-images-section {
+  .client-project-view-page .client-project-view-images-section,
+  .client-project-view-page .client-project-view-payments-section {
     padding: 12px 10px 10px;
   }
 
@@ -2336,6 +2608,10 @@ button:active {
   .client-project-view-page .client-project-view-images-grid {
     grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
     gap: 10px;
+  }
+
+  .client-project-view-page .client-project-view-payments-summary {
+    grid-template-columns: 1fr;
   }
 
   .admin-projects-page .admin-projects-table {

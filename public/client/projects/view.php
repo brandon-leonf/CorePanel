@@ -7,6 +7,7 @@ require __DIR__ . '/../../../src/helpers.php';
 require __DIR__ . '/../../../src/layout.php';
 require __DIR__ . '/../../../src/security.php';
 require __DIR__ . '/../../../src/upload.php';
+require __DIR__ . '/../../../src/project_payments.php';
 
 $me = require_permission($pdo, 'projects.view.own');
 if (user_has_permission($me, 'dashboard.admin.view')) redirect('/admin/dashboard.php');
@@ -32,6 +33,8 @@ $project['notes'] = security_read_project_notes($project['notes'] ?? null);
 $project['project_address'] = security_read_project_address($project['project_address'] ?? null);
 $errors = [];
 $canUploadDocuments = true;
+$projectPaymentsAvailable = ensure_project_payments_table($pdo);
+$projectPaymentReceiptsEnabled = ensure_project_payment_receipts_table($pdo);
 $projectPdfMaxBytes = upload_max_pdf_bytes();
 $projectServerUploadLimitBytes = upload_effective_server_limit_bytes();
 if ($projectServerUploadLimitBytes > 0) {
@@ -108,6 +111,7 @@ $tstmt = $pdo->prepare(
 );
 $tstmt->execute([$id, $tenantId, $userId, $tenantId]);
 $tasks = $tstmt->fetchAll();
+$projectPayments = [];
 $projectImages = [];
 $projectDocuments = [];
 $projectImagesAvailable = true;
@@ -139,6 +143,39 @@ try {
 
 $total = 0.00;
 foreach ($tasks as $t) $total += (float)$t['amount'];
+$paidAmount = 0.00;
+
+if ($projectPaymentsAvailable) {
+  try {
+    $receiptSelect = $projectPaymentReceiptsEnabled
+      ? 'r.receipt_no'
+      : 'NULL AS receipt_no';
+    $receiptJoin = $projectPaymentReceiptsEnabled
+      ? 'LEFT JOIN project_payment_receipts r ON r.payment_id = pp.id'
+      : '';
+    $paymentStmt = $pdo->prepare(
+      "SELECT pp.id, pp.received_at, pp.amount, pp.method, pp.reference, pp.note, {$receiptSelect}
+       FROM project_payments pp
+       JOIN projects p ON p.id = pp.project_id
+       {$receiptJoin}
+       WHERE pp.project_id = ?
+         AND pp.tenant_id = ?
+         AND p.user_id = ?
+         AND p.tenant_id = ?
+       ORDER BY pp.received_at DESC, pp.id DESC"
+    );
+    $paymentStmt->execute([$id, $tenantId, $userId, $tenantId]);
+    $projectPayments = $paymentStmt->fetchAll() ?: [];
+  } catch (Throwable $e) {
+    $projectPaymentsAvailable = false;
+  }
+}
+
+foreach ($projectPayments as $paymentRow) {
+  $paidAmount += (float)($paymentRow['amount'] ?? 0.0);
+}
+$paymentSnapshot = project_payment_snapshot($total, $paidAmount);
+$paymentProgressPercent = number_format((float)$paymentSnapshot['progress_percent'], 1, '.', '');
 
 render_header('Project ' . $project['project_no'] . ' • CorePanel');
 ?>
@@ -189,6 +226,79 @@ render_header('Project ' . $project['project_no'] . ' • CorePanel');
       </div>
 
       <p class="client-project-view-total"><strong>Total:</strong> $<?= number_format((float)$total, 2) ?></p>
+    <?php endif; ?>
+  </section>
+
+  <section class="client-project-view-payments-section" aria-labelledby="client-project-payments-title">
+    <h2 id="client-project-payments-title">Payments & Receipts</h2>
+    <?php if (!$projectPaymentsAvailable): ?>
+      <p class="client-project-view-images-note">Payments are not available yet.</p>
+    <?php else: ?>
+      <div class="client-project-view-payments-summary">
+        <div class="client-project-view-payments-stat">
+          <span>Received</span>
+          <strong>$<?= number_format((float)$paymentSnapshot['paid_amount'], 2) ?></strong>
+        </div>
+        <div class="client-project-view-payments-stat">
+          <span>Balance</span>
+          <strong>$<?= number_format((float)$paymentSnapshot['balance'], 2) ?></strong>
+        </div>
+        <div class="client-project-view-payments-stat">
+          <span>Status</span>
+          <strong class="<?= e(project_payment_status_class((string)$paymentSnapshot['status_key'])) ?>">
+            <?= e((string)$paymentSnapshot['status_label']) ?>
+          </strong>
+        </div>
+      </div>
+      <div class="client-project-view-payments-progress-row">
+        <div class="payment-progress payment-progress-<?= e((string)$paymentSnapshot['status_key']) ?>" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="<?= e($paymentProgressPercent) ?>">
+          <span class="payment-progress-fill" style="width: <?= e($paymentProgressPercent) ?>%;"></span>
+        </div>
+        <small class="payment-progress-caption"><?= e($paymentProgressPercent) ?>%</small>
+      </div>
+
+      <div class="client-project-view-payments-wrap">
+        <table class="client-project-view-payments-table" border="1" cellpadding="8" cellspacing="0">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Amount</th>
+              <th>Method</th>
+              <th>Reference</th>
+              <th>Note</th>
+              <th>Receipt #</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <?php if (!$projectPayments): ?>
+              <tr>
+                <td colspan="7">No payments recorded yet.</td>
+              </tr>
+            <?php else: ?>
+              <?php foreach ($projectPayments as $payment): ?>
+                <?php
+                  $receiptNo = trim((string)($payment['receipt_no'] ?? ''));
+                  $receiptUrl = '/client/projects/receipt.php?project_id=' . (int)$id . '&payment_id=' . (int)$payment['id'];
+                  $receiptPrintUrl = $receiptUrl . '&autoprint=1';
+                ?>
+                <tr>
+                  <td><?= e((string)$payment['received_at']) ?></td>
+                  <td>$<?= number_format((float)$payment['amount'], 2) ?></td>
+                  <td><?= e(project_payment_method_label((string)$payment['method'])) ?></td>
+                  <td><?= e((string)($payment['reference'] ?? '')) ?></td>
+                  <td><?= e((string)($payment['note'] ?? '')) ?></td>
+                  <td><?= $receiptNo !== '' ? e($receiptNo) : 'Pending' ?></td>
+                  <td class="client-project-view-payment-actions">
+                    <a href="<?= e_url_attr($receiptUrl) ?>" target="_blank" rel="noopener">View</a>
+                    <a href="<?= e_url_attr($receiptPrintUrl) ?>" target="_blank" rel="noopener">Print</a>
+                  </td>
+                </tr>
+              <?php endforeach; ?>
+            <?php endif; ?>
+          </tbody>
+        </table>
+      </div>
     <?php endif; ?>
   </section>
 

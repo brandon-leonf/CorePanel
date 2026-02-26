@@ -104,4 +104,37 @@ document.addEventListener('DOMContentLoaded', function () {
       });
     }
   }
+
+  var clientFilterInput = document.querySelector('[data-client-filter-input]');
+  if (clientFilterInput) {
+    var userRows = document.querySelectorAll('[data-user-row]');
+    var noClientMatchRow = document.querySelector('[data-no-client-match]');
+
+    function applyClientFilter() {
+      var query = (clientFilterInput.value || '').trim().toLowerCase();
+      var visibleClientCount = 0;
+
+      userRows.forEach(function (row) {
+        var isClientRow = row.getAttribute('data-client-row') === '1';
+        if (!isClientRow) {
+          row.hidden = false;
+          return;
+        }
+
+        var haystack = (row.getAttribute('data-client-search') || '').toLowerCase();
+        var isMatch = query === '' || haystack.indexOf(query) !== -1;
+        row.hidden = !isMatch;
+        if (isMatch) {
+          visibleClientCount += 1;
+        }
+      });
+
+      if (noClientMatchRow) {
+        noClientMatchRow.hidden = query === '' || visibleClientCount > 0;
+      }
+    }
+
+    clientFilterInput.addEventListener('input', applyClientFilter);
+    applyClientFilter();
+  }
 });
